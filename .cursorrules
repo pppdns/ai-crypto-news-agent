@@ -1,0 +1,256 @@
+# Cursor AI Agent Instructions
+
+- If my prompt is ambiguous, or if you are not sure, ask me clarifying questions to resolve any confusion. This will help prevent generating incorrect code, it's fine if it means I'll need to put in extra effort to answer your questions.
+- When you ask me questions, assign numbers to each question so I can answer them more easily
+- When you finish a refactoring task, do a code review on the changes and fix major issues you may find
+
+# Project Overview
+
+This is a simple Next.js demo project showcasing and LLM-powered web application that acts as a crypto news agent, capable of understanding user questions and providing accurate, real-time answers based on the latest cryptocurrency news events.
+The system ingests and indexes crypto news from multiple publishers, queries them intelligently, and answer using only retrieved evidence.
+Articles are stored in a vector database (`pgvector` version 0.8.0) and queried using a hybrid vector + Full Text Search (FTS) method, then re-ranked, and provided as Retrieval-Augmented Generation (RAG) to the LLM.
+
+## High-Level Goals
+
+1.  Automated ingestion of crypto news articles
+2.  Accurate hybrid retrieval for question answering
+3.  Chat UI with grounded and cited responses
+4.  Reliable recency filtering to avoid outdated information
+5.  Entire system runs locally with Supabase + Postgres in dev mode; In production, it uses a remote Supabase project
+
+# System Architecture Overview
+
+| Stage            | Tooling                                  | Output                          |
+| ---------------- | ---------------------------------------- | ------------------------------- |
+| News ingestion   | RSS + HTML scraping + Firecrawl + LLM    | Clean text + metadata           |
+| Chunking         | Paragraph-based (with overlap)           | Semantically consistent blocks  |
+| Embeddings       | OpenAI `text-embedding-3-large`          | 3072-dim embedding vectors      |
+| Storage          | Supabase Postgres + pgvector + FTS       | Hybrid semantic + keyword index |
+| Candidate search | SQL hybrid ranking                       | Top 40 chunks                   |
+| Re-ranking       | OpenAI LLM scoring (e.g., `gpt-4o-mini`) | Final top 8                     |
+| Final answer     | LLM grounded citing sources              | Relevant, trustworthy summary   |
+
+## Technology Choices and Reasons
+
+| Technology                              | Reason                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------- |
+| **Next.js 16**                          | Unified frontend/backend, Server Actions, DX                              |
+| **Supabase Postgres**                   | Simple setup, local development support, relational and vector DB support |
+| **pgvector**                            | Native semantic search inside Postgres                                    |
+| **Postgres FTS**                        | Exact match for token tickers + crypto entities                           |
+| **OpenAI text-embedding-3-large**       | Handles jargon-heavy crypto content with strong accuracy                  |
+| **Hybrid vector+FTS retrieval**         | Eliminates drift toward irrelevant finance news                           |
+| **Re-ranking model**                    | Ensures top results truly match query intent                              |
+| **RSS ingestion + Firecrawl extractor** | Simple but effective ingestion for real news                              |
+| **LangGraph**                           | Orchestrates multi-step, stateful RAG workflows and retries               |
+| **LangChain**                           | Composable retrieval/reranker/tooling around LLMs                         |
+| **Vercel AI SDK**                       | Streaming tokens to UI; server/edge-friendly AI primitives                |
+
+Crypto news is noisy, specialized, and time-sensitive. These choices directly optimize relevance and freshness.
+
+## Database Schema Requirements
+
+Tables:
+
+- `sources(id, name, homepage_url, rss_url)`
+- `articles(id, source_id, url, url_hash, title, author, published_at, fetched_at, text_summary, tsvector)`
+- `article_chunks(id, article_id, chunk_index, content, title, source_name, published_at, embedding, token_count)`
+
+Indexes and and auto-generated fields:
+
+- pgvector index on `article_chunks.embedding`
+- GIN FTS index on `articles.tsvector` (used for Full Text Search)
+- Recency index on `articles.published_at`
+- Generated column: STORED `tsvector` from weighted `title` + `text_summary`
+- Vector index: **HNSW (cosine)** on `article_chunks.embedding`. L2-normalize embeddings at write time. Tune `m=16–32`, `ef_construction=200–400`, `ef_search=64–128` for recall/latency tradeoffs. Run periodic `VACUUM (ANALYZE)` after bulk writes and on a daily cadence for stable query plans.
+- `UNIQUE (url_hash)` on `articles`
+- `UNIQUE (article_id, chunk_index)` and `CHECK (chunk_index >= 0)` on `article_chunks`
+- Consider partial BRIN/btree on `articles.published_at` for recent ranges
+
+Model constants:
+
+- Embedding dimension: `3072`
+
+RLS: Enabled to disable public access; backend uses service role key (bypasses RLS); no direct client access
+
+### Explanation for fields:
+
+**articles** table
+
+- `text_summary`: The LLM-generated summary of the article in plain text format. Chunks in `article_chunks` come from this text field's paragraphs
+- `tsvector`: Full-text search index on title + content for keyword retrieval.
+- `url_hash`: MD5 hash of the URL after stripping HTTP params. Used for fast indexing and fast equality comparison during uniqueness check
+
+**article_chunks** table
+
+- `content`: The plain text content of a paragraph of an article.
+- Metadata such as `title`, `source_name`, and `published_at` should be resolved via join on `articles` or exposed via a materialized view. Optional denormalization is acceptable for performance.
+- `embedding` (vector(3072)): OpenAI embedding for semantic similarity search. Do not prepend metadata into the embedded text; include metadata via joins or a view.
+- `token_count`: Integer token count for the chunk (enables capping embedder input and budgeting context).
+
+Note: The original article's text is not stored in the database, only its normalized/cleaned summary. If needed, we can store the original content in the future too.
+
+## Ingestion System Requirements
+
+Sources and their RSS feeds:
+
+- Cointelegraph (https://cointelegraph.com/rss)
+- CryptoPotato (https://cryptopotato.com/feed)
+- NewsBTC (https://www.newsbtc.com/feed)
+
+Each run must:
+
+1.  Fetch RSS feed items
+2.  Fetch HTML page for each news article
+3.  Extract summary (Firecrawl)
+4.  Insert article summary into DB
+5.  Chunk based on paragraphs (250–500 tokens target) with **10–20% overlap**; persist `token_count` per chunk and cap tokens per embedding call according to model limits
+6.  Embed chunks
+7.  Store chunk embeddings and metadata
+
+Deduplication rule:
+
+- Unique by URL (MD5 hash for fast comparison)
+
+Reliability and normalization:
+
+- Normalize URLs before hashing (strip params, lowercase host, remove trailing slash, follow redirects, prefer canonical link).
+- Enforce `ON CONFLICT DO NOTHING` on `url_hash` during insert.
+- If a URL has already been loaded and its content extracted via Firecrawl, don't load it again.
+- Persist last seen `pubDate` per source to support incremental ingestion. Batch embeddings and upserts.
+
+## Search Feature Requirements
+
+### Hybrid SQL (Stage 1)
+
+- Create query embedding
+- Retrieve top **40 candidates** using:
+
+Weighted score:
+
+Normalized blend: 0.70 (vector similarity) + 0.30 (FTS rank), with gentle recency decay applied to older content. Normalize each component per-query before combining to keep scales comparable.
+
+Filter:
+
+- Prefer a 14–30 day window with a gentle decay. If the query implies "latest/today/this week", narrow to **48–72 hours**.
+
+### Re-Ranking (Stage 2)
+
+- Re-rank the top 40 using an OpenAI LLM scoring pass (e.g., `gpt-4o-mini`) with **query + chunk text**
+- Output **top 8** for final context
+
+## Answer Generation Requirements
+
+Response rules (must be enforced in prompt):
+
+- Use **only the provided context**
+- Cite every claim, including the article ID from the `articles` table:
+  - Example: `[Date: 2025-10-27, Article ID: d4e05744-6804-47ee-b6d8-7780a1ffd4fb]`
+  - After the LLM returns the answer with the citations to the backend code, the backend will load article metadata (source name, link, etc.) and include these in the citation list
+  - The backend code returns the LLM-generated answer and the enriched citation list to the frontend
+
+- If missing info (insufficient evidence after retrieval + rerank), return exactly:
+
+  > "No recent news"
+
+- Add guardrails in the prompt to strictly avoid non-context claims and refuse to fabricate details.
+
+- If the user request is offensive, hateful, or otherwise disallowed, respond with a brief refusal and do not perform retrieval or generation.
+
+- No hallucination allowed
+
+Display snippet previews with URLs.
+
+## UI Requirements
+
+Simple chat interface:
+
+- User enters a question
+- System shows answer to the question
+- System shows citations with their links, titles, dates, and source names
+- Loading indicator while retrieving/answering
+- Stream answer tokens to the UI for responsiveness (via **Vercel AI SDK**)
+- Show per-citation cards including `title`, `source`, `date`, and clickable `url`
+
+Extra pages:
+
+- News article list page at `/news`. Lists articles from Supabase in recency order. Shows title, summary text (`text_summary`), clickable link to source, date for each article. This is a server component.
+
+## Success Criteria
+
+A working user flow:
+
+1.  User asks: “What happened with the Solana ETF this week?”
+2.  System:
+    - Retrieves relevant chunks from recent crypto news
+    - Reranks them
+    - Generates a concise, accurate answer
+    - Includes citations and URLs
+
+3.  No unrelated or outdated general finance articles returned
+
+## Current Limitations
+
+| Limitation                                                     | Impact                              |
+| -------------------------------------------------------------- | ----------------------------------- |
+| English only                                                   | No non-English crypto coverage      |
+| No realtime ingestion scheduling                               | Updates require manual run          |
+| Limited to RSS + article HTML                                  | No price or blockchain data         |
+| Reranker adds latency at scale                                 | OK for demo; not optimized yet      |
+| Vector database, embeddings, chunking, retrieval not optimized | OK for demo                         |
+| Embedding model is probably larger than needed                 | OK for demo, can be optimized later |
+
+Acceptable for a prototype.
+
+## Ops and Cost
+
+- Structured logs for ingestion, embedding, retrieval, reranking, and answer generation
+- Optional: consider tracking latency and failure rates per stage; enable Postgres `pg_stat_statements` if needed
+
+## Security and Config
+
+- Run all retrieval and LLM calls strictly in server actions or route handlers; never expose secrets on the client. Use server-only environment variables for keys.
+- Use `.env.local` for `OPENAI_API_KEY`, Firecrawl key, and Supabase keys; add `.env.example` with required variables. Validate required env vars on startup and fail fast with a clear error.
+- Sanitize HTML and validate URLs before storage if needed
+
+## Supabase and Migrations
+
+- Store DDL in `supabase/migrations` (tables, indexes, generated columns, policies)
+- Regenerate `supabase/database.types.ts` after schema changes using `npm run supabase:gen-types:dev`
+- Enable pgvector in Supabase by adding a migration containing: `CREATE EXTENSION IF NOT EXISTS vector;` (Supabase will use version 0.8.0)
+
+## Tech Stack
+
+### Framework & Runtime
+
+- **Next.js 16** with App Router, server-side rendering
+- **TypeScript** with strict type-safety
+- **Node.js** (v22)
+
+### UI & Styling
+
+- **HeroUI (NextUI)** - React component library
+- **Tailwind CSS** for styling
+- **Lucide React** icons
+
+### Database & Storage
+
+- **Supabase** (PostgreSQL database)
+- **PostgreSQL** (public access disabled via RLS)
+
+### AI & LLM Integration
+
+- **Vercel AI SDK** - Streaming tokens to UI; server/edge-friendly AI primitives
+- **LangChain** - Composable retrieval/reranker/tooling around LLMs
+- **LangGraph** - Orchestrates multi-step, stateful RAG workflows and retries
+
+### Background Jobs
+
+- **Trigger.dev** - For background data ingestion tasks
+
+## Future Enhancements
+
+- Automated periodic ingestion (cron job / Edge scheduler)
+- Query intent classification for better recency filtering and search
+- Use local cross-encoder for scaling re-ranking
+- Add caching for repeated queries
