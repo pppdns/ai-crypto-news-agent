@@ -1,0 +1,25 @@
+{
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "javascript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": true,
+  "editor.linkedEditing": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "workbench.editor.customLabels.patterns": {
+    "**/app/**/page.tsx": "${dirname}/page.tsx",
+    "**/app/**/layout.tsx": "${dirname}/layout.tsx",
+    "**/app/**/template.tsx": "${dirname}/template.tsx",
+    "**/app/**/route.ts": "${dirname}/route.ts",
+    "**/app/**/route.tsx": "${dirname}/route.tsx",
+    "**/app/**/**.ts": "${dirname}/${filename}.${extname}",
+    "**/app/**/**.tsx": "${dirname}/${filename}.${extname}",
+    "**/**.tsx": "${dirname}/${filename}.${extname}",
+    "**/**.ts": "${dirname}/${filename}.${extname}"
+  },
+  "chat.agent.maxRequests": 50,
+  "chat.promptFiles": true,
+  "github.copilot.chat.setupTests.enabled": true,
+  "github.copilot.chat.startDebugging.enabled": true,
+  "chat.mcp.access": "all",
+  "typescript.tsdk": "node_modules/typescript/lib"
+}
