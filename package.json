@@ -24,8 +24,10 @@
     "prepare": "husky && husky install"
   },
   "dependencies": {
+    "@heroui/react": "^2.8.5",
     "@langchain/langgraph": "^1.0.1",
     "@supabase/supabase-js": "^2.76.1",
+    "framer-motion": "^12.23.24",
     "langchain": "^1.0.2",
     "lucide-react": "^0.548.0",
     "next": "16.0.0",
