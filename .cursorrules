@@ -62,7 +62,7 @@ Indexes and and auto-generated fields:
 - GIN FTS index on `articles.tsvector` (used for Full Text Search)
 - Recency index on `articles.published_at`
 - Generated column: STORED `tsvector` from weighted `title` + `text_summary`
-- Vector index: **HNSW (cosine)** on `article_chunks.embedding`. L2-normalize embeddings at write time. Tune `m=16–32`, `ef_construction=200–400`, `ef_search=64–128` for recall/latency tradeoffs. Run periodic `VACUUM (ANALYZE)` after bulk writes and on a daily cadence for stable query plans.
+- Vector index: **IVFFlat (cosine)** on `article_chunks.embedding`. L2-normalize embeddings at write time. Build parameters: `lists=1000` (number of clusters, optimal for 10K-1M chunks). Query parameters: `SET ivfflat.probes = 20` for ~95% recall with acceptable latency. Note: HNSW is limited to 2000 dimensions in pgvector 0.8.0, but text-embedding-3-large requires 3072 dimensions. Run periodic `VACUUM (ANALYZE)` after bulk writes and on a daily cadence for stable query plans.
 - `UNIQUE (url_hash)` on `articles`
 - `UNIQUE (article_id, chunk_index)` and `CHECK (chunk_index >= 0)` on `article_chunks`
 - Consider partial BRIN/btree on `articles.published_at` for recent ranges

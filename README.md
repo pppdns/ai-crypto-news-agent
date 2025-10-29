@@ -21,7 +21,7 @@ A Next.js application that answers crypto questions using fresh, grounded news. 
      - `articles(id, source_id, url, url_hash, title, author, published_at, fetched_at, text_summary, tsvector)`
      - `article_chunks(id, article_id, chunk_index, content, title, source_name, published_at, embedding, token_count)`
    - Indexes
-     - pgvector HNSW (cosine) on `article_chunks.embedding` for fast semantic search
+     - pgvector IVFFlat (cosine) on `article_chunks.embedding` for fast semantic search. Built with `lists=1000`; query with `ivfflat.probes=20` for ~95% recall. Note: HNSW is limited to 2000 dimensions in pgvector 0.8.0, but text-embedding-3-large requires 3072 dimensions.
      - GIN index on `articles.tsvector` for keyword/FTS (Full Text Search)
      - Recency index on `articles.published_at`
 
@@ -116,7 +116,7 @@ QUERY PATH
 - **Supabase Postgres**: Local dev simplicity plus hosted Postgres in production.
 - **pgvector + Postgres FTS (hybrid retrieval)**: Combines semantic understanding with exact keyword/ticker matching to stay on‑topic for crypto. Simpler than maintaining a purpose-built vector database.
 - **OpenAI `text-embedding-3-large`**: Strong performance on jargon‑heavy crypto content; 3072‑dim vectors improve recall. Note: `text-embedding-3-small` may be enough too.
-- **HNSW (cosine) index with L2‑normalized vectors**: Fast, high‑recall ANN search (Approximate Nearest Neighbor).
+- **IVFFlat (cosine) index with L2‑normalized vectors**: Fast, high‑recall ANN search (Approximate Nearest Neighbor). Built with `lists=1000`, queried with `probes=20` for ~95% recall. IVFFlat is used instead of HNSW because HNSW is limited to 2000 dimensions in pgvector 0.8.0.
 - **LLM re‑ranking**: Final precision layer that ensures retrieved chunks truly match intent before answering.
 - **Strict citations + context‑only generation**: Trustworthy answers grounded in real articles.
 
