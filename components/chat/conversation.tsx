@@ -30,7 +30,7 @@ export default function Component() {
           key={role}
           avatar={role === 'assistant' ? avatars.assistant : avatars.user}
           message={message}
-          messageClassName={role === 'user' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'}
+          messageClassName={role === 'user' ? 'bg-gray-100 text-gray-800' : 'bg-gray-200 text-gray-800'}
         />
       ))}
     </div>

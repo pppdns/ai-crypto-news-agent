@@ -39,12 +39,12 @@ const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
         <div className="flex w-full flex-col gap-4">
           <div
             className={cn(
-              'rounded-medium bg-content2 text-default-600 relative w-full px-4 py-3',
+              'rounded-large bg-content2 text-default-600 relative w-full px-4 py-3',
               failedMessageClassName,
               messageClassName,
             )}
           >
-            <div ref={messageRef} className={'text-small pr-20'}>
+            <div ref={messageRef} className={'text-small p-2'}>
               {hasFailed ? failedMessage : message}
             </div>
           </div>

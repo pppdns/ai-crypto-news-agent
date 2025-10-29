@@ -14,7 +14,7 @@ export default function Component({
   scrollShadowClassname?: string;
 }) {
   return (
-    <div className={cn('flex w-full max-w-full flex-col gap-8', className)}>
+    <div className={cn('flex w-full max-w-full flex-col gap-24', className)}>
       <ScrollShadow className={cn('flex h-full flex-col', scrollShadowClassname)}>
         <Conversation />
       </ScrollShadow>

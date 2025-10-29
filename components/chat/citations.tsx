@@ -18,20 +18,20 @@ export const Citations: React.FC<CitationsProps> = ({ citations, className = '' 
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      <h4 className="text-default-700 text-sm font-semibold">Sources:</h4>
-      <div className="space-y-2">
+    <div className={`space-y-2 ${className}`}>
+      <h4 className="text-default-700 text-sm font-medium">Sources:</h4>
+      <div className="space-y-1.5">
         {citations.map((citation, index) => (
           <a
             key={index}
             href={citation.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded-lg border border-gray-200 bg-gray-50 p-3 transition-colors hover:bg-white"
+            className="block rounded border border-gray-100 bg-white p-2 transition-colors hover:bg-gray-100/50"
           >
-            <div className="flex flex-col gap-1">
-              <h5 className="text-default-900 text-sm font-medium">{citation.title}</h5>
-              <div className="text-default-500 flex gap-2 text-xs">
+            <div className="flex flex-col gap-0.5">
+              <h5 className="text-default-700 text-xs font-normal">{citation.title}</h5>
+              <div className="text-default-400 flex gap-1.5 text-xs">
                 <span>{citation.sourceName}</span>
                 <span>•</span>
                 <span>{citation.relativeDate}</span>

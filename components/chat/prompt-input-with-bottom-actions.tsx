@@ -21,15 +21,15 @@ export default function Component() {
       <ScrollShadow hideScrollBar className="flex flex-nowrap gap-2" orientation="horizontal">
         <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           {ideas.map((idea, index) => (
-            <div key={index} className="h-10 text-left text-sm">
-              <Button className="h-10 w-full text-left text-sm" variant="flat">
+            <div key={index} className="text-left text-sm">
+              <Button className="h-8 w-full bg-gray-100 text-left text-sm" variant="flat" size="sm">
                 <p>{idea}</p>
               </Button>
             </div>
           ))}
         </div>
       </ScrollShadow>
-      <form className="rounded-medium bg-default-100 hover:bg-default-200/70 flex w-full flex-col items-start transition-colors">
+      <form className="rounded-large bg-default-100 hover:bg-default-200/70 flex w-full flex-col items-start transition-colors">
         <PromptInput
           classNames={{
             inputWrapper: 'bg-transparent! shadow-none',
