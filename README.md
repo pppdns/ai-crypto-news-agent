@@ -31,9 +31,10 @@ A Next.js application that answers crypto questions using fresh, grounded news. 
      - Applies gentle recency decay; defaults to a 14–30 day window, shrinks to ~48–72 hours when the query implies “latest/today/this week”.
    - Returns top 40 chunk candidates.
 
-6. Re‑ranking
-   - Uses an LLM scoring pass (`gpt-4o-mini`) over query + chunk text.
-   - Selects the final top 8 chunks for answer context.
+6. Re‑ranking (Conditional)
+   - **If < 10 candidates**: Skips expensive LLM re-ranking, uses all candidates directly (already sorted by hybrid search).
+   - **If ≥ 10 candidates**: Uses LLM scoring pass (`gpt-4o-mini`) over query + chunk text, selects top 8 chunks.
+   - LangGraph orchestrates this decision with conditional routing for optimal performance.
 
 7. Answer generation
    - Generates a concise response using only the provided context.
@@ -62,9 +63,15 @@ INGESTION PIPELINE
 └─────────────────────────────────┘
 
 
-QUERY PATH
+QUERY PATH (LangGraph Workflow)
 ┌─────────────────────────────────┐
 │  User Question                  │
+└────────────┬────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────┐
+│  Detect Temporal Window         │
+│  ("today" → 1 day, etc.)        │
 └────────────┬────────────────────┘
              │
              ▼
@@ -81,33 +88,48 @@ QUERY PATH
              │
              ▼
 ┌─────────────────────────────────┐
-│  Top 40 Candidates              │
+│  0-40 Candidates                │
 └────────────┬────────────────────┘
              │
-             ▼
-┌─────────────────────────────────┐
-│  LLM Re-ranking                 │
-│  (gpt-4o-mini)                  │
-└────────────┬────────────────────┘
+        [Conditional Routing]
              │
-             ▼
-┌─────────────────────────────────┐
-│  Top 8 Chunks                   │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  LLM Answer Generation          │
-│  (context-only, with citations) │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Stream to Chat UI              │
-│  • Answer with citations        │
-│  • Citation cards (title, URL)  │
-│  • Or "No recent news"          │
-└─────────────────────────────────┘
+    ┌────────┴────────┐
+    │                 │
+0 results?      < 10 results?
+    │                 │
+    ▼                 ▼
+  END      ┌─────────────────────┐
+"No news"  │  Skip Re-ranking    │
+           │  (use all directly) │
+           └─────────┬───────────┘
+                     │
+                ≥ 10 results?
+                     │
+                     ▼
+           ┌─────────────────────┐
+           │  LLM Re-ranking     │
+           │  (gpt-4o-mini)      │
+           │  → Top 8 Chunks     │
+           └─────────┬───────────┘
+                     │
+                     ▼
+           ┌─────────────────────┐
+           │  LLM Answer Gen     │
+           │  (context + cites)  │
+           └─────────┬───────────┘
+                     │
+                     ▼
+           ┌─────────────────────┐
+           │  Enrich Citations   │
+           │  (add metadata)     │
+           └─────────┬───────────┘
+                     │
+                     ▼
+           ┌─────────────────────┐
+           │  Stream to Chat UI  │
+           │  • Answer + cites   │
+           │  • Citation cards   │
+           └─────────────────────┘
 ```
 
 ## Key technical choices (and why)
@@ -117,7 +139,8 @@ QUERY PATH
 - **pgvector + Postgres FTS (hybrid retrieval)**: Combines semantic understanding with exact keyword/ticker matching to stay on‑topic for crypto. Simpler than maintaining a purpose-built vector database.
 - **OpenAI `text-embedding-3-large` @ 1536 dimensions**: Strong performance on jargon‑heavy crypto content. Using dimensions=1536 (reduced from 3072) retains 95% of semantic quality while enabling HNSW indexing within pgvector 0.8.0's limits. Outperforms text-embedding-3-small at same cost.
 - **HNSW (cosine) index with L2‑normalized vectors**: Fast, high‑recall ANN search (Approximate Nearest Neighbor). Built with `m=16, ef_construction=64` for 97-99% recall, superior to IVFFlat.
-- **LLM re‑ranking**: Final precision layer that ensures retrieved chunks truly match intent before answering.
+- **LangGraph 1.0.1 with conditional routing**: Orchestrates the RAG pipeline with smart decision-making. Skips expensive LLM re-ranking when candidate count is low (< 10), optimizing both cost and latency while maintaining quality.
+- **Conditional LLM re‑ranking**: Final precision layer for high-candidate scenarios (≥ 10 results) that ensures retrieved chunks truly match intent before answering.
 - **Strict citations + context‑only generation**: Trustworthy answers grounded in real articles.
 
 ## Security & configuration
@@ -158,7 +181,7 @@ QUERY PATH
 
 - **Vercel AI SDK** - Streaming tokens to UI; server/edge-friendly AI primitives
 - **LangChain** - Composable retrieval/reranker/tooling around LLMs
-- **LangGraph** - Orchestrates multi-step, stateful RAG workflows and retries
+- **LangGraph 1.0.1** - StateGraph with conditional routing for intelligent RAG workflow orchestration. Dynamically skips re-ranking for low-candidate scenarios, optimizing cost and speed.
 
 ### Background Jobs
 

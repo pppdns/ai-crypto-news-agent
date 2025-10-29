@@ -187,34 +187,43 @@ System prompts for LLM operations.
 
 ### workflow.ts
 
-Sequential pipeline orchestration of the entire RAG flow.
+LangGraph-based orchestration of the entire RAG flow with conditional routing.
 
 **Pipeline Nodes**:
 
 1. `detectTemporal` - Temporal window detection
 2. `generateEmbedding` - Query embedding
 3. `hybridSearch` - Candidate retrieval
-4. `rerank` - LLM re-ranking
-5. `generateAnswer` - Answer generation
-6. `enrichCitations` - Citation enrichment
+4. `skipRerank` - Skip re-ranking for few candidates (< 10)
+5. `rerank` - LLM re-ranking for many candidates (≥ 10)
+6. `generateAnswer` - Answer generation
+7. `enrichCitations` - Citation enrichment
 
 **Execution**:
 
 ```typescript
-// Sequential execution through all nodes
+// LangGraph execution with conditional routing
 const result = await executeRAGWorkflow(query);
 ```
 
-**Architecture**: Simple sequential flow with manual state passing between nodes
+**Architecture**: LangGraph StateGraph with conditional routing based on candidate count
 
-**Error Handling**: Each node catches errors and sets `error` in state. If error is set, pipeline aborts immediately.
+**Conditional Routing**:
+
+- If 0 candidates → END early (already sets "No recent news")
+- If < 10 candidates → Skip to `skipRerank` (use top candidates directly)
+- If ≥ 10 candidates → Proceed to `rerank` (full LLM re-ranking)
+
+**Error Handling**: Each node catches errors and sets `error` in state. Routing function checks for errors and ends workflow early if detected.
 
 **Benefits**:
 
 - Full TypeScript type safety
+- Visual workflow representation
+- Smart conditional routing for performance
 - Easy to debug and trace
-- No external orchestration dependencies
-- Explicit state transitions
+- Extensible for future enhancements (persistence, human-in-the-loop)
+- Built on LangGraph 1.0.1
 
 ## Configuration
 
@@ -334,8 +343,7 @@ Each module handles errors gracefully:
 
 - `openai@6.7.0` - LLM and embeddings
 - `@supabase/supabase-js@2.76.1` - Database
-
-**Note**: Originally designed to use `@langchain/langgraph`, but implemented as a sequential pipeline for better TypeScript compatibility and simpler maintenance.
+- `@langchain/langgraph@1.0.1` - Workflow orchestration with conditional routing
 
 ## Common Issues
 
@@ -393,26 +401,31 @@ async function myNewNode(state: RAGState): Promise<Partial<RAGState>> {
 }
 ```
 
-**Step 2**: Add your node to the sequential pipeline in `executeWorkflowSteps()`:
+**Step 2**: Add your node to the LangGraph in `buildRAGGraph()`:
 
 ```typescript
-async function executeWorkflowSteps(initialState: RAGState): Promise<RAGState> {
-  let state = { ...initialState };
+function buildRAGGraph() {
+  const workflow = new StateGraph(GraphAnnotation)
+    // ... existing nodes ...
+    .addNode('myNewNode', myNewNode)
+    // ... existing edges ...
+    .addEdge('someNode', 'myNewNode')
+    .addEdge('myNewNode', 'nextNode');
 
-  // ... existing nodes ...
-
-  // Add your node in the appropriate position
-  const myResult = await myNewNode(state);
-  state = { ...state, ...myResult };
-  if (state.error) return state;
-
-  // ... continue with remaining nodes ...
-
-  return state;
+  return workflow.compile();
 }
 ```
 
-**Step 3**: Update the `RAGState` interface in `types.ts` if needed:
+**Step 3**: Update the `GraphAnnotation` schema if needed:
+
+```typescript
+const GraphAnnotation = Annotation.Root({
+  // ... existing fields ...
+  myNewField: Annotation<MyCustomType>,
+});
+```
+
+**Step 4**: Update the `RAGState` interface in `types.ts` if needed:
 
 ```typescript
 export interface RAGState {

@@ -1,13 +1,13 @@
 # RAG Pipeline Implementation Summary
 
-The complete RAG (Retrieval-Augmented Generation) pipeline has been implemented with a sequential pipeline architecture, hybrid search, LLM re-ranking, and streaming responses with citations.
+The complete RAG (Retrieval-Augmented Generation) pipeline has been implemented using LangGraph 1.0.1 for orchestration, with conditional routing, hybrid search, LLM re-ranking, and streaming responses with citations.
 
 ## Files Created
 
 ### Core RAG Modules (`lib/server/rag/`)
 
 1. **`types.ts`** - TypeScript interfaces for RAG pipeline
-   - `RAGState`: Sequential pipeline state
+   - `RAGState`: LangGraph workflow state
    - `Chunk`: Article chunk with metadata
    - `Citation`: UI citation format
    - `TemporalWindow`: Time filtering config
@@ -39,12 +39,13 @@ The complete RAG (Retrieval-Augmented Generation) pipeline has been implemented 
    - Re-ranking scoring prompt
    - Context formatting with article IDs
 
-7. **`workflow.ts`** - Sequential pipeline orchestration
-   - 6-node workflow with manual state passing
+7. **`workflow.ts`** - LangGraph workflow orchestration
+   - 7-node LangGraph StateGraph with conditional routing
+   - Smart routing: skips re-ranking for < 10 candidates
+   - Early exit on errors or no candidates
    - Error handling at each stage
-   - Linear execution flow with explicit state transitions
    - Exports `executeRAGWorkflow()` function
-   - Full TypeScript type safety
+   - Full TypeScript type safety with Annotation API
 
 ### Database Migration
 
@@ -90,7 +91,7 @@ The complete RAG (Retrieval-Augmented Generation) pipeline has been implemented 
 
 ## How It Works
 
-### Pipeline Flow
+### Pipeline Flow (LangGraph)
 
 ```
                         [User Query]
@@ -117,40 +118,45 @@ The complete RAG (Retrieval-Augmented Generation) pipeline has been implemented 
               │  Vector 70% + FTS 30%    │
               └──────────────────────────┘
                              │
-                    candidates: 40 chunks
+                    candidates: 0-40 chunks
                              │
-                   ┌─────────┴──────────┐
-                   │                    │
-              no results?          yes, continue
-                   │                    │
-                   ↓                    ↓
-          "No recent news"   ┌──────────────────────────┐
-                   │         │  4. rerank()             │
-                   │         │  LLM scores: 1-10        │
-                   │         └──────────────────────────┘
-                   │                    │
-                   │           rerankedChunks: 8
-                   │                    │
-                   │                    ↓
-                   │         ┌──────────────────────────┐
-                   │         │  5. generateAnswer()     │
-                   │         │  Stream with citations   │
-                   │         └──────────────────────────┘
-                   │                    │
-                   │           answer: "..." [Article ID: xxx]
-                   │                    │
-                   │                    ↓
-                   │         ┌──────────────────────────┐
-                   │         │  6. enrichCitations()    │
-                   │         │  Fetch metadata from DB  │
-                   │         └──────────────────────────┘
-                   │                    │
-                   │           citations: [{url, title, ...}]
-                   │                    │
-                   └────────────────────┘
+              ┌──────────────┴──────────────┐
+              │   Conditional Routing       │
+              │   (routeAfterSearch)        │
+              └──────────────┬──────────────┘
                              │
-                             ↓
-                [Streaming Response + Citations]
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+    0 candidates?       < 10 candidates?    ≥ 10 candidates?
+         │                   │                   │
+         ↓                   ↓                   ↓
+  "No recent news"  ┌──────────────────┐  ┌────────────────┐
+       (END)        │ 4a. skipRerank() │  │ 4b. rerank()   │
+                    │ Use top directly │  │ LLM scores 1-10│
+                    └──────────────────┘  └────────────────┘
+                             │                   │
+                    rerankedChunks: ≤8  rerankedChunks: 8
+                             │                   │
+                             └─────────┬─────────┘
+                                       │
+                                       ↓
+                            ┌──────────────────────────┐
+                            │  5. generateAnswer()     │
+                            │  Stream with citations   │
+                            └──────────────────────────┘
+                                       │
+                              answer: "..." [Article ID: xxx]
+                                       │
+                                       ↓
+                            ┌──────────────────────────┐
+                            │  6. enrichCitations()    │
+                            │  Fetch metadata from DB  │
+                            └──────────────────────────┘
+                                       │
+                              citations: [{url, title, ...}]
+                                       │
+                                       ↓
+                       [Streaming Response + Citations]
 ```
 
 ### Error Handling Flow
@@ -158,18 +164,21 @@ The complete RAG (Retrieval-Augmented Generation) pipeline has been implemented 
 ```
 Each Node:
     ├─→ Success: Update state, continue to next node
-    ├─→ Error: Set error in state, abort pipeline
+    ├─→ Error: Set error in state, LangGraph routes to END
     └─→ Special Cases:
-         • hybridSearch: No results → "No recent news"
+         • hybridSearch: No results → Route to END ("No recent news")
+         • hybridSearch: < 10 results → Route to skipRerank
          • rerank: Error → Fallback to top 8 candidates
          • enrichCitations: Error → Empty citations array
 ```
 
 ### Key Features
 
+✅ **LangGraph Orchestration**: StateGraph with conditional routing based on results  
 ✅ **Smart Temporal Filtering**: Automatically adjusts recency window based on query  
 ✅ **Hybrid Retrieval**: Combines semantic search + keyword matching  
-✅ **LLM Re-ranking**: Ensures top results are truly relevant  
+✅ **Conditional Re-ranking**: Skips expensive LLM re-ranking for < 10 candidates  
+✅ **Optimized Performance**: Early exits when no results or errors occur  
 ✅ **Grounded Answers**: Only uses retrieved context, no hallucination  
 ✅ **Streaming**: Progressive token delivery for responsiveness  
 ✅ **Citation Tracking**: Full attribution with links and metadata  
@@ -210,11 +219,13 @@ All required packages are already in `package.json`:
 {
   "ai": "^5.0.81",
   "@ai-sdk/openai": "^2.0.56",
+  "@langchain/langgraph": "^1.0.1",
+  "langchain": "^1.0.2",
   "openai": "^6.7.0"
 }
 ```
 
-**Note**: The pipeline was originally designed to use `@langchain/langgraph` and `langchain`, but was implemented as a sequential pipeline for better TypeScript compatibility and simpler maintenance.
+**Note**: The pipeline uses LangGraph 1.0.1 for orchestration with conditional routing and the Annotation API for type-safe state management.
 
 ## Testing
 

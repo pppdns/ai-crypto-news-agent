@@ -1,7 +1,10 @@
 /**
- * Sequential RAG pipeline workflow
+ * LangGraph-based RAG pipeline workflow
  * Orchestrates: temporal detection → embedding → hybrid search → rerank → answer → citations
+ * Uses conditional routing to optimize execution flow
  */
+import type { CompiledStateGraph } from '@langchain/langgraph';
+import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
 import OpenAI from 'openai';
 import { generateEmbedding } from '../embeddings';
 import { parseCitations } from './citations';
@@ -9,18 +12,31 @@ import { hybridSearch } from './hybrid-search';
 import { getAnswerPrompt } from './prompts';
 import { rerankChunks } from './reranker';
 import { detectTemporalWindow } from './temporal-detection';
-import { RAGState } from './types';
+import type { RAGState } from './types';
+
+// Constants
+const LLM_MODEL = 'gpt-4o-mini' as const;
+const LLM_TEMPERATURE = 0.3;
+const LLM_MAX_TOKENS = 1000;
+const RERANK_THRESHOLD = 10;
+const MAX_CHUNKS = 8;
+const CANDIDATE_LIMIT = 40;
+const DEFAULT_TEMPORAL_WINDOW_DAYS = 21;
+
+// Type for valid route destinations
+type RouteDestination = typeof END | 'skipRerank' | 'rerank';
 
 // OpenAI client singleton
 let openaiClient: OpenAI | null = null;
 
 function getOpenAIClient(): OpenAI {
   if (!openaiClient) {
-    if (!process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
       throw new Error('Missing OPENAI_API_KEY environment variable');
     }
     openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey,
     });
   }
   return openaiClient;
@@ -40,11 +56,12 @@ async function detectTemporalNode(state: RAGState): Promise<Partial<RAGState>> {
     return {
       temporalWindow: temporal.days,
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to detect temporal window';
     console.error('Error in detectTemporalNode:', error);
     return {
-      error: 'Failed to detect temporal window',
-      temporalWindow: 21, // Default fallback
+      error: errorMessage,
+      temporalWindow: DEFAULT_TEMPORAL_WINDOW_DAYS,
     };
   }
 }
@@ -61,10 +78,11 @@ async function generateEmbeddingNode(state: RAGState): Promise<Partial<RAGState>
     return {
       queryEmbedding: embedding,
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate query embedding';
     console.error('Error in generateEmbeddingNode:', error);
     return {
-      error: 'Failed to generate query embedding',
+      error: errorMessage,
     };
   }
 }
@@ -87,7 +105,7 @@ async function hybridSearchNode(state: RAGState): Promise<Partial<RAGState>> {
       queryEmbedding: state.queryEmbedding,
       query: state.query,
       temporalWindowDays: state.temporalWindow,
-      limit: 40,
+      limit: CANDIDATE_LIMIT,
     });
 
     if (candidates.length === 0) {
@@ -103,10 +121,11 @@ async function hybridSearchNode(state: RAGState): Promise<Partial<RAGState>> {
     return {
       candidates,
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to execute hybrid search';
     console.error('Error in hybridSearchNode:', error);
     return {
-      error: 'Failed to execute hybrid search',
+      error: errorMessage,
     };
   }
 }
@@ -121,17 +140,17 @@ async function rerankNode(state: RAGState): Promise<Partial<RAGState>> {
 
   try {
     console.log('Re-ranking candidates...');
-    const rerankedChunks = await rerankChunks(state.query, state.candidates, 8);
+    const rerankedChunks = await rerankChunks(state.query, state.candidates, MAX_CHUNKS);
     console.log(`Re-ranking complete: ${rerankedChunks.length} top chunks`);
 
     return {
       rerankedChunks,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in rerankNode:', error);
     // Fall back to top candidates without re-ranking
     return {
-      rerankedChunks: state.candidates.slice(0, 8),
+      rerankedChunks: state.candidates.slice(0, MAX_CHUNKS),
     };
   }
 }
@@ -155,10 +174,10 @@ async function generateAnswerNode(state: RAGState): Promise<Partial<RAGState>> {
     // Non-streaming completion for the workflow
     // (Streaming will be handled in the route handler)
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: LLM_MODEL,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 1000,
+      temperature: LLM_TEMPERATURE,
+      max_tokens: LLM_MAX_TOKENS,
     });
 
     const answer = response.choices[0]?.message?.content || 'No recent news';
@@ -167,10 +186,11 @@ async function generateAnswerNode(state: RAGState): Promise<Partial<RAGState>> {
     return {
       answer,
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to generate answer';
     console.error('Error in generateAnswerNode:', error);
     return {
-      error: 'Failed to generate answer',
+      error: errorMessage,
     };
   }
 }
@@ -191,7 +211,7 @@ async function enrichCitationsNode(state: RAGState): Promise<Partial<RAGState>> 
     return {
       citations,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in enrichCitationsNode:', error);
     return {
       citations: [],
@@ -200,73 +220,140 @@ async function enrichCitationsNode(state: RAGState): Promise<Partial<RAGState>> 
 }
 
 /**
- * Execute RAG pipeline sequentially through all nodes
- * This replaces LangGraph orchestration with a simple sequential execution
+ * Node: Skip re-ranking when too few candidates
+ * Uses all available candidates directly without LLM scoring
+ * Since we have < RERANK_THRESHOLD candidates, we use them all rather than discarding any
  */
-async function executeWorkflowSteps(initialState: RAGState): Promise<RAGState> {
-  let state = { ...initialState };
+async function skipRerankNode(state: RAGState): Promise<Partial<RAGState>> {
+  console.log('Skipping re-ranking (too few candidates)...');
+  // Use all candidates since we already have so few (< RERANK_THRESHOLD)
+  // They're already sorted by hybrid search score
+  console.log(`Using all ${state.candidates.length} candidates directly`);
 
-  // Step 1: Detect temporal window
-  const temporalResult = await detectTemporalNode(state);
-  state = { ...state, ...temporalResult };
-  if (state.error) return state;
+  return {
+    rerankedChunks: state.candidates,
+  };
+}
 
-  // Step 2: Generate query embedding
-  const embeddingResult = await generateEmbeddingNode(state);
-  state = { ...state, ...embeddingResult };
-  if (state.error) return state;
+/**
+ * Routing function: Decide whether to skip re-ranking
+ * Routes based on candidate count and error state
+ */
+function routeAfterSearch(state: RAGState): RouteDestination {
+  // If error occurred or no candidates found, end early
+  if (state.error || state.candidates.length === 0) {
+    console.log('Routing to END (error or no candidates)');
+    return END;
+  }
 
-  // Step 3: Execute hybrid search
-  const searchResult = await hybridSearchNode(state);
-  state = { ...state, ...searchResult };
-  if (state.error) return state;
+  // Skip re-ranking if fewer than threshold
+  if (state.candidates.length < RERANK_THRESHOLD) {
+    console.log(`Routing to skipRerank (only ${state.candidates.length} candidates)`);
+    return 'skipRerank';
+  }
 
-  // Step 4: Re-rank candidates
-  const rerankResult = await rerankNode(state);
-  state = { ...state, ...rerankResult };
-  if (state.error) return state;
+  // Otherwise, proceed with full re-ranking
+  console.log(`Routing to rerank (${state.candidates.length} candidates)`);
+  return 'rerank';
+}
 
-  // Step 5: Generate answer
-  const answerResult = await generateAnswerNode(state);
-  state = { ...state, ...answerResult };
-  if (state.error) return state;
+/**
+ * Define the state schema using LangGraph Annotation API
+ */
+const GraphAnnotation = Annotation.Root({
+  query: Annotation<string>,
+  temporalWindow: Annotation<number | null>,
+  queryEmbedding: Annotation<number[] | null>,
+  candidates: Annotation<RAGState['candidates']>,
+  rerankedChunks: Annotation<RAGState['rerankedChunks']>,
+  answer: Annotation<string>,
+  citations: Annotation<RAGState['citations']>,
+  error: Annotation<string | null>,
+});
 
-  // Step 6: Enrich citations
-  const citationsResult = await enrichCitationsNode(state);
-  state = { ...state, ...citationsResult };
+/**
+ * Build and compile the LangGraph workflow
+ * Creates a StateGraph with conditional routing for optimized execution
+ */
+function buildRAGGraph(): CompiledStateGraph<
+  typeof GraphAnnotation.State,
+  unknown,
+  | '__start__'
+  | 'detectTemporal'
+  | 'generateEmbedding'
+  | 'hybridSearch'
+  | 'skipRerank'
+  | 'rerank'
+  | 'generateAnswer'
+  | 'enrichCitations'
+> {
+  const workflow = new StateGraph(GraphAnnotation)
+    // Add all nodes
+    .addNode('detectTemporal', detectTemporalNode)
+    .addNode('generateEmbedding', generateEmbeddingNode)
+    .addNode('hybridSearch', hybridSearchNode)
+    .addNode('skipRerank', skipRerankNode)
+    .addNode('rerank', rerankNode)
+    .addNode('generateAnswer', generateAnswerNode)
+    .addNode('enrichCitations', enrichCitationsNode)
+    // Define the flow
+    .addEdge(START, 'detectTemporal')
+    .addEdge('detectTemporal', 'generateEmbedding')
+    .addEdge('generateEmbedding', 'hybridSearch')
+    // Conditional routing after search
+    .addConditionalEdges('hybridSearch', routeAfterSearch, {
+      [END]: END,
+      skipRerank: 'skipRerank',
+      rerank: 'rerank',
+    })
+    // Both paths converge at generateAnswer
+    .addEdge('skipRerank', 'generateAnswer')
+    .addEdge('rerank', 'generateAnswer')
+    .addEdge('generateAnswer', 'enrichCitations')
+    .addEdge('enrichCitations', END);
 
-  return state;
+  return workflow.compile();
 }
 
 /**
  * Execute RAG workflow for a query
+ * Uses LangGraph StateGraph for orchestration with conditional routing
  *
  * @param query - User's question
  * @returns Final state with answer and citations
  */
 export async function executeRAGWorkflow(query: string): Promise<RAGState> {
-  const initialState: RAGState = {
+  const initialState = {
     query,
-    temporalWindow: null,
-    queryEmbedding: null,
-    candidates: [],
-    rerankedChunks: [],
+    temporalWindow: null as number | null,
+    queryEmbedding: null as number[] | null,
+    candidates: [] as RAGState['candidates'],
+    rerankedChunks: [] as RAGState['rerankedChunks'],
     answer: '',
-    citations: [],
-    error: null,
+    citations: [] as RAGState['citations'],
+    error: null as string | null,
   };
 
   try {
     console.log(`\n=== Starting RAG workflow for query: "${query}" ===\n`);
-    const result = await executeWorkflowSteps(initialState);
+
+    // Build and compile the graph
+    const graph = buildRAGGraph();
+
+    // Execute the graph
+    const result = await graph.invoke(initialState);
+
     console.log('\n=== RAG workflow completed ===\n');
 
-    return result;
-  } catch (error) {
+    // The result from LangGraph has the same shape as RAGState
+    // Type assertion is safe here as we control the graph structure
+    return result as unknown as RAGState;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('RAG workflow execution error:', error);
     return {
       ...initialState,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMessage,
       answer: 'An error occurred while processing your request.',
     };
   }
