@@ -241,7 +241,7 @@ Acceptable for a prototype.
 
 ### AI & LLM Integration
 
-- **Vercel AI SDK** - Streaming tokens to UI; server/edge-friendly AI primitives
+- **Vercel AI SDK** version 5 - Streaming tokens to UI; server/edge-friendly AI primitives
 - **LangChain** - Composable retrieval/reranker/tooling around LLMs
 - **LangGraph** - Orchestrates multi-step, stateful RAG workflows and retries
 
