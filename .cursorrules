@@ -24,7 +24,7 @@ Articles are stored in a vector database (`pgvector` version 0.8.0) and queried 
 | ---------------- | ---------------------------------------- | ------------------------------- |
 | News ingestion   | RSS + HTML scraping + Firecrawl + LLM    | Clean text + metadata           |
 | Chunking         | Paragraph-based (with overlap)           | Semantically consistent blocks  |
-| Embeddings       | OpenAI `text-embedding-3-large`          | 3072-dim embedding vectors      |
+| Embeddings       | OpenAI `text-embedding-3-large` @ 1536d  | 1536-dim embedding vectors      |
 | Storage          | Supabase Postgres + pgvector + FTS       | Hybrid semantic + keyword index |
 | Candidate search | SQL hybrid ranking                       | Top 40 chunks                   |
 | Re-ranking       | OpenAI LLM scoring (e.g., `gpt-4o-mini`) | Final top 8                     |
@@ -32,19 +32,19 @@ Articles are stored in a vector database (`pgvector` version 0.8.0) and queried 
 
 ## Technology Choices and Reasons
 
-| Technology                              | Reason                                                                    |
-| --------------------------------------- | ------------------------------------------------------------------------- |
-| **Next.js 16**                          | Unified frontend/backend, Server Actions, DX                              |
-| **Supabase Postgres**                   | Simple setup, local development support, relational and vector DB support |
-| **pgvector**                            | Native semantic search inside Postgres                                    |
-| **Postgres FTS**                        | Exact match for token tickers + crypto entities                           |
-| **OpenAI text-embedding-3-large**       | Handles jargon-heavy crypto content with strong accuracy                  |
-| **Hybrid vector+FTS retrieval**         | Eliminates drift toward irrelevant finance news                           |
-| **Re-ranking model**                    | Ensures top results truly match query intent                              |
-| **RSS ingestion + Firecrawl extractor** | Simple but effective ingestion for real news                              |
-| **LangGraph**                           | Orchestrates multi-step, stateful RAG workflows and retries               |
-| **LangChain**                           | Composable retrieval/reranker/tooling around LLMs                         |
-| **Vercel AI SDK**                       | Streaming tokens to UI; server/edge-friendly AI primitives                |
+| Technology                                | Reason                                                                              |
+| ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Next.js 16**                            | Unified frontend/backend, Server Actions, DX                                        |
+| **Supabase Postgres**                     | Simple setup, local development support, relational and vector DB support           |
+| **pgvector**                              | Native semantic search inside Postgres                                              |
+| **Postgres FTS**                          | Exact match for token tickers + crypto entities                                     |
+| **OpenAI text-embedding-3-large @ 1536d** | Handles jargon-heavy crypto content with strong accuracy, 95% of full model quality |
+| **Hybrid vector+FTS retrieval**           | Eliminates drift toward irrelevant finance news                                     |
+| **Re-ranking model**                      | Ensures top results truly match query intent                                        |
+| **RSS ingestion + Firecrawl extractor**   | Simple but effective ingestion for real news                                        |
+| **LangGraph**                             | Orchestrates multi-step, stateful RAG workflows and retries                         |
+| **LangChain**                             | Composable retrieval/reranker/tooling around LLMs                                   |
+| **Vercel AI SDK**                         | Streaming tokens to UI; server/edge-friendly AI primitives                          |
 
 Crypto news is noisy, specialized, and time-sensitive. These choices directly optimize relevance and freshness.
 
@@ -62,14 +62,15 @@ Indexes and and auto-generated fields:
 - GIN FTS index on `articles.tsvector` (used for Full Text Search)
 - Recency index on `articles.published_at`
 - Generated column: STORED `tsvector` from weighted `title` + `text_summary`
-- Vector index: **IVFFlat (cosine)** on `article_chunks.embedding`. L2-normalize embeddings at write time. Build parameters: `lists=1000` (number of clusters, optimal for 10K-1M chunks). Query parameters: `SET ivfflat.probes = 20` for ~95% recall with acceptable latency. Note: HNSW is limited to 2000 dimensions in pgvector 0.8.0, but text-embedding-3-large requires 3072 dimensions. Run periodic `VACUUM (ANALYZE)` after bulk writes and on a daily cadence for stable query plans.
+- Vector index: **HNSW (cosine)** on `article_chunks.embedding`. L2-normalize embeddings at write time. Build parameters: `m=16, ef_construction=64` for 97-99% recall. We use text-embedding-3-large with dimensions=1536 (retains 95% of full 3072d quality) to fit within pgvector 0.8.0's 2000-dimension HNSW limit. Run periodic `VACUUM (ANALYZE)` after bulk writes and on a daily cadence for stable query plans.
 - `UNIQUE (url_hash)` on `articles`
 - `UNIQUE (article_id, chunk_index)` and `CHECK (chunk_index >= 0)` on `article_chunks`
 - Consider partial BRIN/btree on `articles.published_at` for recent ranges
 
 Model constants:
 
-- Embedding dimension: `3072`
+- Embedding model: `text-embedding-3-large` with `dimensions=1536`
+- Embedding dimension: `1536`
 
 RLS: Enabled to disable public access; backend uses service role key (bypasses RLS); no direct client access
 

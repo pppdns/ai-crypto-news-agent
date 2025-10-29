@@ -46,7 +46,7 @@ CREATE TABLE article_chunks (
   source_name text,
   published_at timestamptz,
   -- Vector embedding
-  embedding vector(3072), -- OpenAI text-embedding-3-large (3072 dimensions)
+  embedding vector(1536), -- OpenAI text-embedding-3-large with dimensions=1536
   token_count integer,
   created_at timestamptz NOT NULL DEFAULT now(),
   -- Unique constraint: one chunk index per article
@@ -63,28 +63,30 @@ CREATE INDEX idx_articles_published_at ON articles(published_at); -- Recency fil
 CREATE INDEX idx_articles_source_id ON articles(source_id); -- Join optimization
 
 -- Article chunks table indexes
--- IVFFlat index for vector similarity search (cosine distance)
--- Note: HNSW is limited to 2000 dimensions in pgvector 0.8.0, but text-embedding-3-large uses 3072 dimensions
--- IVFFlat is used instead - supports larger dimensions with good performance
+-- HNSW index for vector similarity search (cosine distance)
+-- We use text-embedding-3-large with dimensions=1536 (reduced from 3072) which:
+--   - Retains ~95% of full model semantic quality
+--   - Fits within pgvector 0.8.0's 2000-dimension HNSW limit
+--   - Enables HNSW's superior accuracy (97-99% recall vs IVFFlat's 90-95%)
 -- 
--- Index Parameters (build-time):
---   lists = 1000 (number of clusters)
---   - Higher = better accuracy but slower index build and larger index
---   - Optimal range: sqrt(rows) to rows/1000
---   - 1000 is good for 10K-1M chunks (our expected range)
+-- HNSW Parameters:
+--   m = 16 (max connections per layer)
+--     - Higher m = better recall but larger index and slower builds
+--     - 16 is optimal for most use cases
+--   ef_construction = 64 (build-time search depth)
+--     - Higher = better index quality but slower build
+--     - 64 is good balance for production
 --
--- Query Parameters (set at query time for accuracy tuning):
---   SET ivfflat.probes = 20;  -- Default is 1, increase for better recall
---   - probes=1:  ~85% recall, fastest
---   - probes=10: ~92% recall, balanced
---   - probes=20: ~95% recall, slower but high accuracy
---   - probes=50: ~98% recall, much slower
+-- Query-time tuning (if needed):
+--   SET hnsw.ef_search = 40;  -- Default, increase for higher recall
+--   - ef_search=40:  ~97% recall (default, fast)
+--   - ef_search=64:  ~98% recall (balanced)
+--   - ef_search=128: ~99% recall (slower, near-perfect)
 --
--- Performance trade-off: Higher lists + probes = better accuracy but slower queries
--- Start with probes=20 for production, adjust based on recall requirements
+-- For most queries, default ef_search=40 provides excellent 97% recall
 CREATE INDEX idx_article_chunks_embedding ON article_chunks 
-  USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 1000);
+  USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
 
 CREATE INDEX idx_article_chunks_article_id ON article_chunks(article_id); -- Join optimization
 CREATE INDEX idx_article_chunks_published_at ON article_chunks(published_at); -- Recency filtering
@@ -142,38 +144,33 @@ COMMENT ON COLUMN article_chunks.content IS 'Plain text content of article parag
 COMMENT ON COLUMN article_chunks.title IS 'Denormalized from articles.title for query performance';
 COMMENT ON COLUMN article_chunks.source_name IS 'Denormalized from sources.name for query performance';
 COMMENT ON COLUMN article_chunks.published_at IS 'Denormalized from articles.published_at for recency filtering';
-COMMENT ON COLUMN article_chunks.embedding IS 'L2-normalized 3072-dim vector from OpenAI text-embedding-3-large';
+COMMENT ON COLUMN article_chunks.embedding IS 'L2-normalized 1536-dim vector from OpenAI text-embedding-3-large (dimensions=1536)';
 COMMENT ON COLUMN article_chunks.token_count IS 'Token count for chunk - used for context budgeting';
 
 -- =============================================================================
--- IVFFLAT TUNING GUIDE
+-- EMBEDDING MODEL CONFIGURATION
 -- =============================================================================
 -- 
--- To tune IVFFlat accuracy at query time, set the probes parameter in your backend:
+-- This schema uses OpenAI text-embedding-3-large with dimensions=1536:
 --
--- Example usage in application code:
---
---   // Before vector similarity queries, set probes for higher accuracy
---   await supabase.rpc('execute_sql', { 
---     sql: 'SET ivfflat.probes = 20' 
+--   const embedding = await openai.embeddings.create({
+--     model: "text-embedding-3-large",
+--     input: text,
+--     dimensions: 1536  // Request reduced dimensions
 --   });
 --
---   // Or in raw SQL:
---   SET ivfflat.probes = 20;
+-- Why 1536 instead of full 3072 dimensions?
+--   1. Fits within pgvector 0.8.0's 2000-dimension HNSW limit
+--   2. Enables HNSW index (97-99% recall, superior to IVFFlat)
+--   3. Retains ~95% of full model's semantic quality
+--   4. text-embedding-3-large @ 1536d outperforms text-embedding-3-small @ 1536d
+--   5. Same cost as full 3072-dim model
 --
---   // Then run your vector similarity query
---   SELECT id, content, embedding <=> $1 AS distance
---   FROM article_chunks
---   ORDER BY embedding <=> $1
---   LIMIT 40;
+-- HNSW Query Tuning (optional):
+--   The default ef_search=40 provides 97% recall, which is excellent.
+--   If you need higher recall, tune at query time:
 --
--- Accuracy vs Speed trade-off:
---   probes=1:  85% recall, ~5-10ms   (default, fast but less accurate)
---   probes=10: 92% recall, ~15-25ms  (recommended for production)
---   probes=20: 95% recall, ~30-50ms  (high accuracy, acceptable for demo)
---   probes=50: 98% recall, ~100ms+   (near-HNSW accuracy, slower)
+--   SET hnsw.ef_search = 64;   -- 98% recall
+--   SET hnsw.ef_search = 128;  -- 99% recall (slower)
 --
--- Recommendation: Start with probes=20, increase to 50 if recall is insufficient
---
--- Note: This setting is per-session, so set it before each query batch or use
--- connection pooler settings to persist across connections.
+-- For most use cases, the default HNSW settings are optimal.
