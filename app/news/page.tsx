@@ -1,5 +1,5 @@
 import { NewsList } from '@/components/news/news-list';
-import { getServerClient } from '@/lib/server/supabase';
+import { getSupabaseClient } from '@/lib/server/supabase';
 
 export const metadata = {
   title: 'News - AI Crypto News Agent',
@@ -16,7 +16,7 @@ interface ArticleWithSource {
 }
 
 async function getArticles(): Promise<ArticleWithSource[]> {
-  const supabase = getServerClient();
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
     .from('articles')

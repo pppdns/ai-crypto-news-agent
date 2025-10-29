@@ -109,7 +109,7 @@ export default function Component({
         <PromptInput
           ref={inputRef}
           classNames={{
-            inputWrapper: 'bg-transparent! shadow-none',
+            inputWrapper: 'bg-transparent! shadow-none border-gray-200 ',
             innerWrapper: 'relative',
             input: 'pt-1 pl-2 pb-6 pr-10! text-medium',
           }}
@@ -142,7 +142,7 @@ export default function Component({
           minRows={3}
           radius="lg"
           value={input}
-          variant="flat"
+          variant="bordered"
           onValueChange={setInput}
           isDisabled={isLoading}
         />

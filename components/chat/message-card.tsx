@@ -36,7 +36,7 @@ const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
             <Avatar src={avatar} />
           </Badge>
         </div>
-        <div className="flex w-full flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <div
             className={cn(
               'rounded-large bg-content2 text-default-600 relative w-full px-3 md:p-6',

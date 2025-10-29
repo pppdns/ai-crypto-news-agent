@@ -129,7 +129,25 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      hybrid_search: {
+        Args: {
+          cutoff_date?: string;
+          match_count?: number;
+          match_threshold?: number;
+          query_embedding: string;
+          query_text: string;
+        };
+        Returns: {
+          article_id: string;
+          chunk_id: string;
+          content: string;
+          published_at: string;
+          score: number;
+          source_name: string;
+          title: string;
+          url: string;
+        }[];
+      };
     };
     Enums: {
       [_ in never]: never;

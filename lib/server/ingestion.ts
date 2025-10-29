@@ -2,7 +2,7 @@
  * Database ingestion utilities for articles and chunks
  */
 import type { TablesInsert } from '@/supabase/database.types';
-import { getServerClient } from './supabase';
+import { getSupabaseClient } from './supabase';
 import { hashUrl } from './url-utils';
 
 /**
@@ -18,7 +18,7 @@ export async function insertArticle(article: {
   publishedAt: string;
   textSummary: string;
 }): Promise<{ id: string; isNew: boolean }> {
-  const supabase = getServerClient();
+  const supabase = getSupabaseClient();
   const urlHash = hashUrl(article.url);
 
   // First, check if article already exists
@@ -96,7 +96,7 @@ export async function insertChunks(
     return;
   }
 
-  const supabase = getServerClient();
+  const supabase = getSupabaseClient();
 
   // Convert embeddings to the format expected by pgvector (stringified array)
   const chunkData: TablesInsert<'article_chunks'>[] = chunks.map((chunk) => ({
@@ -122,7 +122,7 @@ export async function insertChunks(
  * Get source ID by name
  */
 export async function getSourceIdByName(sourceName: string): Promise<string | null> {
-  const supabase = getServerClient();
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase.from('sources').select('id').eq('name', sourceName).single();
 
@@ -141,7 +141,7 @@ export async function getSourceIdByName(sourceName: string): Promise<string | nu
  * Get all sources
  */
 export async function getSources(): Promise<Array<{ id: string; name: string }>> {
-  const supabase = getServerClient();
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase.from('sources').select('id, name');
 

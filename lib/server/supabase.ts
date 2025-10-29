@@ -43,7 +43,7 @@ export function createServerClient() {
  */
 let serverClientInstance: ReturnType<typeof createServerClient> | null = null;
 
-export function getServerClient() {
+export function getSupabaseClient() {
   if (!serverClientInstance) {
     serverClientInstance = createServerClient();
   }
