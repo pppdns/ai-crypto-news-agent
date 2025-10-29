@@ -3,7 +3,127 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never;
+      article_chunks: {
+        Row: {
+          article_id: string;
+          chunk_index: number;
+          content: string;
+          created_at: string;
+          embedding: string | null;
+          id: string;
+          published_at: string | null;
+          source_name: string | null;
+          title: string | null;
+          token_count: number | null;
+        };
+        Insert: {
+          article_id: string;
+          chunk_index: number;
+          content: string;
+          created_at?: string;
+          embedding?: string | null;
+          id?: string;
+          published_at?: string | null;
+          source_name?: string | null;
+          title?: string | null;
+          token_count?: number | null;
+        };
+        Update: {
+          article_id?: string;
+          chunk_index?: number;
+          content?: string;
+          created_at?: string;
+          embedding?: string | null;
+          id?: string;
+          published_at?: string | null;
+          source_name?: string | null;
+          title?: string | null;
+          token_count?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'article_chunks_article_id_fkey';
+            columns: ['article_id'];
+            isOneToOne: false;
+            referencedRelation: 'articles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      articles: {
+        Row: {
+          author: string | null;
+          created_at: string;
+          fetched_at: string;
+          id: string;
+          published_at: string | null;
+          source_id: string;
+          text_summary: string | null;
+          title: string | null;
+          tsvector: unknown;
+          url: string;
+          url_hash: string;
+        };
+        Insert: {
+          author?: string | null;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          published_at?: string | null;
+          source_id: string;
+          text_summary?: string | null;
+          title?: string | null;
+          tsvector?: unknown;
+          url: string;
+          url_hash: string;
+        };
+        Update: {
+          author?: string | null;
+          created_at?: string;
+          fetched_at?: string;
+          id?: string;
+          published_at?: string | null;
+          source_id?: string;
+          text_summary?: string | null;
+          title?: string | null;
+          tsvector?: unknown;
+          url?: string;
+          url_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'articles_source_id_fkey';
+            columns: ['source_id'];
+            isOneToOne: false;
+            referencedRelation: 'sources';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      sources: {
+        Row: {
+          created_at: string;
+          homepage_url: string;
+          id: string;
+          name: string;
+          rss_url: string;
+        };
+        Insert: {
+          created_at?: string;
+          homepage_url: string;
+          id?: string;
+          name: string;
+          rss_url: string;
+        };
+        Update: {
+          created_at?: string;
+          homepage_url?: string;
+          id?: string;
+          name?: string;
+          rss_url?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
