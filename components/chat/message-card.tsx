@@ -39,7 +39,7 @@ const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
         <div className="flex w-full flex-col gap-4">
           <div
             className={cn(
-              'rounded-large bg-content2 text-default-600 relative w-full px-4 py-3',
+              'rounded-large bg-content2 text-default-600 relative w-full px-3 md:p-6',
               failedMessageClassName,
               messageClassName,
             )}

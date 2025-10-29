@@ -24,6 +24,8 @@ export default function Component({
   isLoading,
   setIsLoading,
 }: PromptInputWithBottomActionsProps) {
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
+
   const ideas = [
     'Bitcoin price changes from US-China relations?',
     'What is the latest news on the SEC vs Binance lawsuit?',
@@ -31,12 +33,19 @@ export default function Component({
     'What are the recent Norwegian tax changes related to crypto?',
   ];
 
+  // Auto-focus the input on page load
+  React.useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
-    setInput('');
+    // Don't clear input yet - wait for streaming to start
     setIsLoading(true);
 
     // Send the user message
@@ -59,13 +68,20 @@ export default function Component({
     });
   };
 
-  // Reset loading state when we get a response
+  // Clear input when streaming starts and reset loading state when response completes
   React.useEffect(() => {
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.role === 'assistant' && isLoading) {
-      setIsLoading(false);
+    if (lastMessage?.role === 'assistant') {
+      // Clear the input as soon as we see an assistant message (streaming has started)
+      if (input && isLoading) {
+        setInput('');
+      }
+      // Reset loading state when we have a complete response
+      if (isLoading) {
+        setIsLoading(false);
+      }
     }
-  }, [messages, isLoading, setIsLoading]);
+  }, [messages, isLoading, input, setIsLoading, setInput]);
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -91,6 +107,7 @@ export default function Component({
         onSubmit={handleSubmit}
       >
         <PromptInput
+          ref={inputRef}
           classNames={{
             inputWrapper: 'bg-transparent! shadow-none',
             innerWrapper: 'relative',
