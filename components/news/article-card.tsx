@@ -1,0 +1,45 @@
+import { Card, CardBody, CardHeader, Link } from '@heroui/react';
+import { ExternalLink } from 'lucide-react';
+
+interface ArticleCardProps {
+  title: string | null;
+  url: string;
+  text_summary: string | null;
+  source_name: string;
+  published_at: string | null;
+}
+
+export function ArticleCard({ title, url, text_summary, source_name, published_at }: ArticleCardProps) {
+  // Format the date nicely
+  const formattedDate = published_at
+    ? new Date(published_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : 'Unknown date';
+
+  return (
+    <Card className="transition-shadow hover:shadow-lg">
+      <CardHeader className="flex-col items-start gap-2 pb-2">
+        <Link
+          href={url}
+          isExternal
+          showAnchorIcon
+          className="text-lg font-semibold text-slate-800"
+          anchorIcon={<ExternalLink className="h-4 w-4" />}
+        >
+          {title || 'Untitled'}
+        </Link>
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <span className="text-primary font-medium">{source_name}</span>
+          <span>•</span>
+          <span>{formattedDate}</span>
+        </div>
+      </CardHeader>
+      <CardBody className="pt-0">
+        <p className="line-clamp-4 text-sm text-slate-600">{text_summary || 'No summary available'}</p>
+      </CardBody>
+    </Card>
+  );
+}
