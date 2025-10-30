@@ -33,7 +33,7 @@ async function getArticles(): Promise<ArticleWithSource[]> {
     `,
     )
     .order('published_at', { ascending: false, nullsFirst: false })
-    .limit(500);
+    .limit(1000);
 
   if (error) {
     console.error('Error fetching articles:', error);
