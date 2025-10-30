@@ -1,195 +1,163 @@
-## AI Chat Agent for Crypto News
+# AI Crypto News Agent
 
-A Next.js application that answers crypto questions using fresh, grounded news. It ingests articles from major crypto publishers, indexes them with vectors and full‑text search, retrieves and re‑ranks the most relevant passages, and generates concise answers with strict citations.
+**A Next.js application that answers crypto questions using fresh, grounded news with strict citations.**
 
-## How it works
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres-green)](https://supabase.com/)
+[![pgvector](https://img.shields.io/badge/pgvector-0.8.0-purple)](https://github.com/pgvector/pgvector)
+[![OpenAI](https://img.shields.io/badge/OpenAI-embeddings-orange)](https://openai.com/)
 
-1. Ingestion
-   - Fetches RSS items from Cointelegraph, CryptoPotato, NewsBTC, 99Bitcoins, Crypto Briefing, and ZyCrypto.
-   - Filters articles by date (newer than `last_scraped_at` per source, max 30 days old).
-   - Scrapes article URLs with Firecrawl to extract clean plain‑text summaries.
-   - Deduplicates by normalized URL hash before processing.
-   - Persists article metadata and summary to Supabase Postgres.
-   - Updates `last_scraped_at` timestamp for incremental ingestion on subsequent runs.
+---
 
-2. Chunking
-   - Splits the article summary into paragraph‑sized chunks targeting 250–500 tokens with ~10–20% overlap.
+## What It Does
 
-3. Embeddings
-   - Uses OpenAI `text-embedding-3-large` with dimensions=1536 (retains 95% of full model quality while fitting pgvector limits)
+Ingests crypto news from **6 major publishers** → Indexes with **hybrid vector + full-text search** → Retrieves & re-ranks relevant passages → Generates **cited, grounded answers** using LLMs.
 
-4. Storage & Indexing
-   - Tables
-     - `sources(id, name, homepage_url, rss_url, last_scraped_at)`
-     - `articles(id, source_id, url, url_hash, title, author, published_at, fetched_at, text_summary, tsvector)`
-     - `article_chunks(id, article_id, chunk_index, content, title, source_name, published_at, embedding, token_count)`
-   - Indexes
-     - pgvector HNSW (cosine) on `article_chunks.embedding` for fast semantic search with 97-99% recall. Built with `m=16, ef_construction=64`. Uses text-embedding-3-large @ 1536d to fit within pgvector 0.8.0's 2000-dimension HNSW limit.
-     - GIN index on `articles.tsvector` for keyword/FTS (Full Text Search)
-     - Recency index on `articles.published_at`
+**Try it:** Ask _"What happened with the Solana ETF this week?"_ and get an accurate, source-backed answer with citations.
 
-5. Retrieval (Hybrid SQL)
-   - Creates a query embedding, searches top candidates using a normalized blend:
-     - 0.70 vector similarity + 0.30 FTS rank
-     - Applies gentle recency decay; defaults to a 14–30 day window, shrinks to ~48–72 hours when the query implies “latest/today/this week”.
-   - Returns top 40 chunk candidates.
+---
 
-6. Re‑ranking (Conditional)
-   - **If < 10 candidates**: Skips expensive LLM re-ranking, uses all candidates directly (already sorted by hybrid search).
-   - **If ≥ 10 candidates**: Uses LLM scoring pass (`gpt-4o-mini`) over query + chunk text, selects top 8 chunks.
-   - LangGraph orchestrates this decision with conditional routing for optimal performance.
+## 📰 News Sources
 
-7. Answer generation
-   - Generates a concise response using only the provided context.
-   - Every claim is cited with the `articles` table ID and date (the backend enriches citations with source name, title, and URL).
-   - If evidence is insufficient, returns exactly: "No recent news" instead of hallucinating.
-   - Guardrails prevent non‑context claims and fabrication.
+| Source              | Homepage                                         |
+| ------------------- | ------------------------------------------------ |
+| **Cointelegraph**   | [cointelegraph.com](https://cointelegraph.com)   |
+| **CryptoPotato**    | [cryptopotato.com](https://cryptopotato.com)     |
+| **NewsBTC**         | [newsbtc.com](https://www.newsbtc.com)           |
+| **99Bitcoins**      | [99bitcoins.com](https://99bitcoins.com)         |
+| **Crypto Briefing** | [cryptobriefing.com](https://cryptobriefing.com) |
+| **ZyCrypto**        | [zycrypto.com](https://zycrypto.com)             |
 
-8. UI
-   - Simple single-turn chat interface (one question, one answer at a time).
-   - Built with Next.js 16 and Vercel AI SDK for streaming tokens.
-   - When a new question is submitted, the previous Q&A and citations are cleared.
-   - Citation cards show title, source, date, and a clickable URL.
-   - `/news` lists stored articles in reverse‑chronological order with title, source, summary, and link.
+📖 **Details:** [docs/crypto-news-sources.md](docs/crypto-news-sources.md)
 
-## Flow
+---
 
-```text
-INGESTION PIPELINE
-┌─────────────────────────────────┐
-│  Fetch & Extract Articles       │
-│  (RSS + Firecrawl)              │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Chunk → Embed → Index          │
-│  (Postgres + pgvector + FTS)    │
-└─────────────────────────────────┘
+## System Architecture
 
+### Ingestion Pipeline (Runs every 15 Minutes)
 
-QUERY PATH (LangGraph Workflow)
-┌─────────────────────────────────┐
-│  User Question                  │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Detect Temporal Window         │
-│  ("today" → 1 day, etc.)        │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Create Query Embedding         │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  Hybrid Retrieval               │
-│  0.70 vector + 0.30 FTS         │
-│  + recency decay                │
-└────────────┬────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────┐
-│  0-40 Candidates                │
-└────────────┬────────────────────┘
-             │
-        [Conditional Routing]
-             │
-    ┌────────┴────────┐
-    │                 │
-0 results?      < 10 results?
-    │                 │
-    ▼                 ▼
-  END      ┌─────────────────────┐
-"No news"  │  Skip Re-ranking    │
-           │  (use all directly) │
-           └─────────┬───────────┘
-                     │
-                ≥ 10 results?
-                     │
-                     ▼
-           ┌─────────────────────┐
-           │  LLM Re-ranking     │
-           │  (gpt-4o-mini)      │
-           │  → Top 8 Chunks     │
-           └─────────┬───────────┘
-                     │
-                     ▼
-           ┌─────────────────────┐
-           │  LLM Answer Gen     │
-           │  (context + cites)  │
-           └─────────┬───────────┘
-                     │
-                     ▼
-           ┌─────────────────────┐
-           │  Enrich Citations   │
-           │  (add metadata)     │
-           └─────────┬───────────┘
-                     │
-                     ▼
-           ┌─────────────────────┐
-           │  Stream to Chat UI  │
-           │  • Answer + cites   │
-           │  • Citation cards   │
-           └─────────────────────┘
+**RSS Feeds** → **Firecrawl Extraction** → **Normalization & Data Cleaning** → **Chunk & Embed** → **Supabase Postgres**
+
+- Incremental ingestion via `last_scraped_at` tracking
+- Automated via Trigger.dev scheduled task
+
+📖 **Details:** [docs/scheduled-crawling.md](docs/scheduled-crawling.md) | [docs/ingestion-pipeline.md](docs/ingestion-pipeline.md) | [docs/crawler.md](docs/crawler.md)
+
+### RAG Pipeline (Query Path)
+
+```
+User Question → Temporal Detection → Query Embedding
+                        ↓
+            Hybrid Search (40 candidates)
+       0.70 vector + 0.30 FTS + recency decay
+                        ↓
+            Conditional Re-ranking ⚡
+       < 10 results: skip | ≥ 10: LLM rerank → top 8
+                        ↓
+              Answer Generation + Citations
+                        ↓
+              Stream to UI (Vercel AI SDK)
 ```
 
-## Key technical choices (and why)
+**LangGraph orchestrates** the workflow with conditional routing for optimal cost/latency.
 
-- **Next.js 16**: Unified UI + server actions with great DX and streaming.
-- **Supabase Postgres**: Local dev simplicity plus hosted Postgres in production.
-- **pgvector + Postgres FTS (hybrid retrieval)**: Combines semantic understanding with exact keyword/ticker matching to stay on‑topic for crypto. Simpler than maintaining a purpose-built vector database.
-- **OpenAI `text-embedding-3-large` @ 1536 dimensions**: Strong performance on jargon‑heavy crypto content. Using dimensions=1536 (reduced from 3072) retains 95% of semantic quality while enabling HNSW indexing within pgvector 0.8.0's limits. Outperforms text-embedding-3-small at same cost.
-- **HNSW (cosine) index with L2‑normalized vectors**: Fast, high‑recall ANN search (Approximate Nearest Neighbor). Built with `m=16, ef_construction=64` for 97-99% recall, superior to IVFFlat.
-- **LangGraph 1.0.1 with conditional routing**: Orchestrates the RAG pipeline with smart decision-making. Skips expensive LLM re-ranking when candidate count is low (< 10), optimizing both cost and latency while maintaining quality.
-- **Conditional LLM re‑ranking**: Final precision layer for high-candidate scenarios (≥ 10 results) that ensures retrieved chunks truly match intent before answering.
-- **Strict citations + context‑only generation**: Trustworthy answers grounded in real articles.
+📖 **Details:** [docs/rag-pipeline.md](docs/rag-pipeline.md)
 
-## Security & configuration
+---
 
-- RLS is enabled; server uses the Supabase service role key on the backend.
+## 🔑 Key Technical Choices
 
-## User flow
+| Technology                                  | Why                                                                                                                 |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **pgvector + Postgres FTS**                 | Hybrid search: semantic understanding + exact keyword matching for crypto jargon                                    |
+| **OpenAI `text-embedding-3-large` @ 1536d** | 95% quality retention, fits pgvector 0.8.0 HNSW limits, handles crypto jargon; Could be replaced by a smaller model |
+| **HNSW index (m=16, ef=64)**                | 97-99% recall with fast ANN search, superior to IVFFlat                                                             |
+| **LangGraph conditional routing**           | Skips LLM re-ranking when < 10 candidates (cost/latency optimization)                                               |
+| **Vercel AI SDK**                           | Streaming tokens for responsive UI                                                                                  |
+| **Trigger.dev**                             | Reliable 15-minute scheduled ingestion with retries                                                                 |
 
-1. User asks: "What happened with the Solana ETF this week?"
-2. Previous question, answer, and citations are cleared immediately.
-3. System retrieves relevant recent chunks → re‑ranks → generates a concise answer.
-4. The response streams to the UI with citations and URLs to the underlying sources.
-5. Submitting a new question replaces the entire conversation.
+---
 
-## Notes
+## 📊 Database Schema
 
-- Designed for freshness and relevance in a noisy, fast‑moving domain.
-- Runs locally with Supabase in development; production uses a remote Supabase project.
+```sql
+sources (id, name, homepage_url, rss_url, last_scraped_at)
+articles (id, source_id, url, url_hash, title, published_at, text_summary, tsvector)
+article_chunks (id, article_id, chunk_index, content, embedding[1536], token_count)
+```
 
-## Tech Stack
+**Indexes:**
 
-### Framework & Runtime
+- HNSW (cosine) on `article_chunks.embedding`
+- GIN on `articles.tsvector` (full-text search)
+- B-tree on `articles.published_at` (recency filtering)
 
-- **Next.js 16** with App Router, server-side rendering
-- **TypeScript** with strict type-safety
-- **Node.js** (v22)
+---
 
-### UI & Styling
+## 🚀 Features
 
-- **HeroUI (NextUI)** - React component library
-- **Tailwind CSS** for styling
-- **Lucide React** icons
+### Chat Interface (root page)
 
-### Database & Storage
+- Single-turn Q&A with streaming responses
+- Strict citations: every claim backed by article ID, date, and source
+- Returns **"No recent news"** instead of hallucinating
+- Citation cards with title, source, date, and URL
 
-- **Supabase** (PostgreSQL database)
-- **PostgreSQL** (public access disabled via RLS)
+### News List (`/news`)
 
-### AI & LLM Integration
+- Browse all ingested articles
 
-- **Vercel AI SDK** - Streaming tokens to UI; server/edge-friendly AI primitives
-- **LangChain** - Composable retrieval/reranker/tooling around LLMs
-- **LangGraph 1.0.1** - StateGraph with conditional routing for intelligent RAG workflow orchestration. Dynamically skips re-ranking for low-candidate scenarios, optimizing cost and speed.
+---
 
-### Background Jobs
+## 🛠️ Tech Stack
 
-- **Trigger.dev** - Scheduled task runs every 15 minutes to automatically crawl and ingest crypto news (see `docs/scheduled-crawling.md`)
+| Layer                  | Technology                                                   |
+| ---------------------- | ------------------------------------------------------------ |
+| **Framework**          | Next.js 16 (App Router, Server Actions)                      |
+| **Language**           | TypeScript (strict mode)                                     |
+| **Database**           | Supabase Postgres + pgvector 0.8.0                           |
+| **AI/LLM**             | OpenAI (embeddings + generation), LangChain, LangGraph 1.0.1 |
+| **UI**                 | HeroUI (NextUI), Tailwind CSS, Lucide React                  |
+| **Background Jobs**    | Trigger.dev (15-min scheduled crawling)                      |
+| **Content Extraction** | Firecrawl                                                    |
+
+---
+
+## 📁 Documentation
+
+- **[Crawler](docs/crawler.md)** - Ingestion system details
+- **[Ingestion Pipeline](docs/ingestion-pipeline.md)** - Mock vs. manual vs. scheduled ingestion
+- **[RAG Pipeline](docs/rag-pipeline.md)** - Retrieval, re-ranking, and answer generation
+- **[Scheduled Crawling](docs/scheduled-crawling.md)** - Trigger.dev automation
+- **[Trigger Deployment](docs/trigger-deployment.md)** - Production deployment guide
+- **[Crypto News Sources](docs/crypto-news-sources.md)** - RSS feed details
+
+---
+
+## Other notes
+
+**Local + production** deployment ready
+
+---
+
+## 🔐 Security
+
+- RLS enabled on Postgres (public access disabled)
+- Server-only API keys (Supabase service role, OpenAI, Firecrawl)
+- No client-side secret exposure
+
+---
+
+## 📝 Environment Variables
+
+```bash
+# Required
+SUPABASE_URL=
+SUPABASE_API_KEY=  # Service role key
+OPENAI_API_KEY=
+FIRECRAWL_API_KEY=
+NODE_ENV=
+```
+
+See `.env.example` for the complete list.
