@@ -3,33 +3,23 @@
 import React from 'react';
 import { Button, ScrollShadow, Tooltip } from '@heroui/react';
 import { cn } from '@heroui/react';
-import { UIMessage } from 'ai';
 import { ArrowUp } from 'lucide-react';
 import PromptInput from './prompt-input';
 
 interface PromptInputWithBottomActionsProps {
   input: string;
   setInput: (value: string) => void;
-  sendMessage: (message: { role: 'user' | 'assistant'; parts: Array<{ type: 'text'; text: string }> }) => void;
-  messages: UIMessage[];
+  sendMessage: (text: string) => void;
   isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
 }
 
-export default function Component({
-  input,
-  setInput,
-  sendMessage,
-  messages,
-  isLoading,
-  setIsLoading,
-}: PromptInputWithBottomActionsProps) {
+export default function Component({ input, setInput, sendMessage, isLoading }: PromptInputWithBottomActionsProps) {
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
   const ideas = [
-    'Bitcoin price changes from US-China relations?',
+    'Latest Bitcoin news?',
+    'How did XRP perform this week?',
     'What is the latest news on the SEC vs Binance lawsuit?',
-    'How to spot bull and bear market traps in crypto?',
     'What are the recent Norwegian tax changes related to crypto?',
   ];
 
@@ -45,43 +35,13 @@ export default function Component({
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
-    // Don't clear input yet - wait for streaming to start
-    setIsLoading(true);
-
-    // Send the user message
-    sendMessage({
-      role: 'user',
-      parts: [{ type: 'text', text: userMessage }],
-    });
+    sendMessage(userMessage);
   };
 
   const handleSuggestionClick = (suggestion: string) => {
     if (isLoading) return;
-
-    setInput(suggestion);
-    setIsLoading(true);
-
-    // Send the suggestion immediately
-    sendMessage({
-      role: 'user',
-      parts: [{ type: 'text', text: suggestion }],
-    });
+    sendMessage(suggestion);
   };
-
-  // Clear input when streaming starts and reset loading state when response completes
-  React.useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.role === 'assistant') {
-      // Clear the input as soon as we see an assistant message (streaming has started)
-      if (input && isLoading) {
-        setInput('');
-      }
-      // Reset loading state when we have a complete response
-      if (isLoading) {
-        setIsLoading(false);
-      }
-    }
-  }, [messages, isLoading, input, setIsLoading, setInput]);
 
   return (
     <div className="flex w-full flex-col gap-4">

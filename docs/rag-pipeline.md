@@ -409,13 +409,35 @@ const RERANK_PARAMS = {
 
 **Location**: `components/chat/prompt-container-with-conversation.tsx`
 
+**Architecture**: Single-turn conversation (one question, one answer at a time)
+
 **Flow**:
 
-1. User sends message via `useChat()` hook
-2. Hook calls `/ask` endpoint
-3. Receives streaming tokens + data events
-4. Extracts citations from data array
-5. Updates UI with answer and citations
+1. User submits question via input or suggestion button
+2. Component sends POST request to `/ask` endpoint with `{ query: string }`
+3. Previous question, answer, and citations are cleared immediately
+4. Receives streaming text response token by token
+5. Updates assistant answer state progressively during streaming
+6. Extracts citations from final data event
+7. Displays complete answer with citations
+
+**State Management**:
+
+```typescript
+const [userQuestion, setUserQuestion] = useState('');
+const [assistantAnswer, setAssistantAnswer] = useState('');
+const [citations, setCitations] = useState<Citation[]>([]);
+const [isLoading, setIsLoading] = useState(false);
+```
+
+**API Request Format**:
+
+```typescript
+fetch('/ask', {
+  method: 'POST',
+  body: JSON.stringify({ query: userQuestion }),
+});
+```
 
 **Citation Display**:
 
@@ -432,20 +454,31 @@ Each citation shows:
 
 ### Data Format
 
-**Streaming Events**:
+**Request Body**:
+
+```json
+{
+  "query": "What happened with Bitcoin today?"
+}
+```
+
+**Streaming Response**:
 
 ```
-data: {"type":"text","value":"Bitcoin recently..."}
-data: {"type":"text","value":" reached new highs"}
+Bitcoin recently...
+ reached new highs
 data: {"type":"citations","citations":[{...}]}
 ```
 
-**useChat Data Extraction**:
+**Citation Extraction**:
 
 ```typescript
-const citationsData = data.find((item) => item?.type === 'citations');
-if (citationsData?.citations) {
-  setCitations(citationsData.citations);
+// Parse streaming data
+if (line.startsWith('data: ')) {
+  const parsed = JSON.parse(line.slice(6));
+  if (parsed.type === 'citations') {
+    setCitations(parsed.citations);
+  }
 }
 ```
 

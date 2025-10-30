@@ -43,7 +43,9 @@ A Next.js application that answers crypto questions using fresh, grounded news. 
    - Guardrails prevent non‑context claims and fabrication.
 
 8. UI
-   - Simple chat built with Next.js 16 and Vercel AI SDK for streaming tokens.
+   - Simple single-turn chat interface (one question, one answer at a time).
+   - Built with Next.js 16 and Vercel AI SDK for streaming tokens.
+   - When a new question is submitted, the previous Q&A and citations are cleared.
    - Citation cards show title, source, date, and a clickable URL.
    - `/news` lists stored articles in reverse‑chronological order with title, source, summary, and link.
 
@@ -149,9 +151,11 @@ QUERY PATH (LangGraph Workflow)
 
 ## User flow
 
-1. User asks: “What happened with the Solana ETF this week?”
-2. System retrieves relevant recent chunks → re‑ranks → generates a concise answer.
-3. The response includes citations and URLs to the underlying sources.
+1. User asks: "What happened with the Solana ETF this week?"
+2. Previous question, answer, and citations are cleared immediately.
+3. System retrieves relevant recent chunks → re‑ranks → generates a concise answer.
+4. The response streams to the UI with citations and URLs to the underlying sources.
+5. Submitting a new question replaces the entire conversation.
 
 ## Notes
 

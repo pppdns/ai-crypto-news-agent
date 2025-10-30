@@ -7,25 +7,16 @@ import { executeRAGWorkflow } from '@/lib/server/rag/workflow';
 export const maxDuration = 30;
 
 interface RequestBody {
-  messages: Array<{
-    role: string;
-    content: string;
-  }>;
+  query: string;
 }
 
 export async function POST(req: Request) {
   try {
-    // TODO: Isn't this a simple object?
-    const { messages }: RequestBody = await req.json();
+    const { query }: RequestBody = await req.json();
 
-    // Extract the last user message as the query
-    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user');
-
-    if (!lastUserMessage || !lastUserMessage.content) {
+    if (!query || !query.trim()) {
       return new Response('No user query provided', { status: 400 });
     }
-
-    const query = lastUserMessage.content;
     console.log(`Processing query: "${query}"`);
 
     // Execute RAG workflow (non-streaming for retrieval)
@@ -76,12 +67,12 @@ export async function POST(req: Request) {
     const stream = result.textStream;
     let fullText = '';
 
-    const transformStream = new TransformStream({
-      async transform(chunk, controller) {
+    const transformStream = new TransformStream<string, string>({
+      async transform(chunk: string, controller: TransformStreamDefaultController<string>) {
         fullText += chunk;
         controller.enqueue(chunk);
       },
-      async flush(controller) {
+      async flush(controller: TransformStreamDefaultController<string>) {
         // Parse citations after streaming completes
         const { citations } = await parseCitations(fullText);
         console.log(`Parsed ${citations.length} citations from response`);
