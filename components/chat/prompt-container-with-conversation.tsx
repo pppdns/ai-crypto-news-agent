@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { ScrollShadow } from '@heroui/react';
 import { cn } from '@heroui/react';
+import { TriangleAlert } from 'lucide-react';
 import { Citation } from './citations';
 import Conversation from './conversation';
 import PromptInputWithBottomActions from './prompt-input-with-bottom-actions';
@@ -125,8 +126,12 @@ export default function Component({
           sendMessage={sendMessage}
           isLoading={isLoading}
         />
-        <p className="text-tiny text-default-400 px-2">
-          AI can make mistakes. Consider checking important information.
+        <p className="text-tiny mt-2 flex items-center gap-1 px-2 font-semibold text-amber-500">
+          <TriangleAlert className="mr-1 inline-block h-4 w-4" />
+          Only news articles since <span className="underline">Oct 29, 2025</span> are included in the database.
+          <a href="/news" className="underline">
+            View all articles
+          </a>
         </p>
       </div>
     </div>
