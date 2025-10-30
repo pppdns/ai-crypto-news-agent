@@ -289,11 +289,10 @@ npm run supabase:stop
 
 ## 📝 Environment Variables Reference
 
-| Variable                        | Required | Description                                        |
-| ------------------------------- | -------- | -------------------------------------------------- |
-| `SUPABASE_URL`                  | ✅       | Supabase API URL (local: `http://127.0.0.1:54321`) |
-| `SUPABASE_API_KEY`              | ✅       | Supabase service role key (bypasses RLS)           |
-| `OPENAI_API_KEY`                | ✅       | OpenAI API key for embeddings and LLM              |
-| `FIRECRAWL_API_KEY`             | ✅       | Firecrawl API key for content extraction           |
-| `NODE_ENV`                      | ⚠️       | `development` or `production`                      |
-| `CRAWLING_MAX_ARTICLE_AGE_DAYS` | ⬜       | Max article age (default: 30 days)                 |
+| Variable            | Required | Description                                        |
+| ------------------- | -------- | -------------------------------------------------- |
+| `SUPABASE_URL`      | ✅       | Supabase API URL (local: `http://127.0.0.1:54321`) |
+| `SUPABASE_API_KEY`  | ✅       | Supabase service role key (bypasses RLS)           |
+| `OPENAI_API_KEY`    | ✅       | OpenAI API key for embeddings and LLM              |
+| `FIRECRAWL_API_KEY` | ✅       | Firecrawl API key for content extraction           |
+| `NODE_ENV`          | ⚠️       | `development` or `production`                      |
