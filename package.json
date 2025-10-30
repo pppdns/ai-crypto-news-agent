@@ -28,6 +28,7 @@
     "@ai-sdk/react": "^2.0.81",
     "@heroui/react": "^2.8.5",
     "@langchain/langgraph": "^1.0.1",
+    "@mendable/firecrawl-js": "^4.4.1",
     "@supabase/supabase-js": "^2.76.1",
     "@types/markdown-it": "^14.1.2",
     "@types/sanitize-html": "^2.16.0",
@@ -39,6 +40,7 @@
     "next": "16.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "rss-parser": "^3.13.0",
     "sanitize-html": "^2.17.0",
     "zod": "^4.1.12"
   },
