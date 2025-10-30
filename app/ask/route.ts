@@ -2,12 +2,23 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { parseCitations } from '@/lib/server/rag/citations';
 import { getAnswerPrompt } from '@/lib/server/rag/prompts';
+import { Citation } from '@/lib/server/rag/types';
 import { executeRAGWorkflow } from '@/lib/server/rag/workflow';
 
 export const maxDuration = 30;
 
 interface RequestBody {
   query: string;
+}
+
+interface CleanedTextMessage {
+  type: 'cleanedText';
+  text: string;
+}
+
+interface CitationsMessage {
+  type: 'citations';
+  citations: Citation[];
 }
 
 export async function POST(req: Request) {
@@ -74,15 +85,22 @@ export async function POST(req: Request) {
       },
       async flush(controller: TransformStreamDefaultController<string>) {
         // Parse citations after streaming completes
-        const { citations } = await parseCitations(fullText);
+        const { text: cleanedText, citations } = await parseCitations(fullText);
         console.log(`Parsed ${citations.length} citations from response`);
 
+        // Send cleaned text replacement message
+        const cleanedTextMessage: CleanedTextMessage = {
+          type: 'cleanedText',
+          text: cleanedText,
+        };
+        controller.enqueue(`\ndata: ${JSON.stringify(cleanedTextMessage)}\n\n`);
+
         // Send citations as a data message
-        const citationsJson = JSON.stringify({
+        const citationsMessage: CitationsMessage = {
           type: 'citations',
           citations,
-        });
-        controller.enqueue(`\ndata: ${citationsJson}\n\n`);
+        };
+        controller.enqueue(`\ndata: ${JSON.stringify(citationsMessage)}\n\n`);
       },
     });
 

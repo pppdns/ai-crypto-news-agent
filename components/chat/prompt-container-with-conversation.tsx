@@ -13,9 +13,10 @@ interface ErrorResponse {
   message?: string;
 }
 
-interface CitationData {
-  type: string;
+interface StreamDataMessage {
+  type: 'citations' | 'cleanedText';
   citations?: Citation[];
+  text?: string;
 }
 
 export default function Component({
@@ -81,9 +82,12 @@ export default function Component({
               if (line.startsWith('data: ')) {
                 const data = line.slice(6);
                 try {
-                  const parsed: CitationData = JSON.parse(data);
+                  const parsed: StreamDataMessage = JSON.parse(data);
                   if (parsed.type === 'citations' && parsed.citations) {
                     setCitations(parsed.citations);
+                  } else if (parsed.type === 'cleanedText' && parsed.text) {
+                    // Replace accumulated text with cleaned version
+                    setAssistantAnswer(parsed.text);
                   }
                 } catch {
                   // Not JSON, treat as text

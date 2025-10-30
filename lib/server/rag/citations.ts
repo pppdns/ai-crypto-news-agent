@@ -64,7 +64,7 @@ export function extractArticleIds(text: string): string[] {
   const ids = new Set<string>();
 
   // Match citation markers
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = CITATION_PATTERN.exec(text)) !== null) {
     ids.add(match[1].toLowerCase());
   }
@@ -81,7 +81,6 @@ export function extractArticleIds(text: string): string[] {
   CITATION_PATTERN.lastIndex = 0;
   UUID_PATTERN.lastIndex = 0;
 
-  // TODO: Use a Set instead?
   return Array.from(ids);
 }
 
@@ -138,7 +137,15 @@ async function fetchArticleMetadata(articleIds: string[]): Promise<
       return new Map();
     }
 
-    const metadataMap = new Map();
+    const metadataMap = new Map<
+      string,
+      {
+        title: string;
+        url: string;
+        source_name: string;
+        published_at: string | null;
+      }
+    >();
 
     if (data) {
       for (const article of data as ArticleWithSource[]) {
@@ -156,6 +163,40 @@ async function fetchArticleMetadata(articleIds: string[]): Promise<
     console.error('Error in fetchArticleMetadata:', error);
     return new Map();
   }
+}
+
+/**
+ * Remove citation markers from text
+ * Removes patterns like:
+ * - [Article ID: uuid]
+ * - [N: uuid]
+ * - [uuid]
+ *
+ * @param text - Text with citation markers
+ * @returns Clean text without citation markers
+ */
+function removeCitationMarkers(text: string): string {
+  let cleanedText = text;
+
+  // Remove [Article ID: uuid] format
+  cleanedText = cleanedText.replace(
+    /\[Article ID:\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\]/gi,
+    '',
+  );
+
+  // Remove [N: uuid] format (e.g., [1: uuid], [2: uuid])
+  cleanedText = cleanedText.replace(/\[\d+:\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\]/gi, '');
+
+  // Remove standalone [uuid] format
+  cleanedText = cleanedText.replace(/\[[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\]/gi, '');
+
+  // Clean up any double spaces left behind
+  cleanedText = cleanedText.replace(/\s{2,}/g, ' ');
+
+  // Clean up space before punctuation
+  cleanedText = cleanedText.replace(/\s+([.,;!?])/g, '$1');
+
+  return cleanedText.trim();
 }
 
 /**
@@ -199,7 +240,10 @@ export async function parseCitations(text: string): Promise<{
 
   const citations = Array.from(citationsMap.values());
 
+  // Remove citation markers from text
+  const cleanedText = removeCitationMarkers(text);
+
   console.log(`Parsed ${citations.length} citations from response`);
 
-  return { text, citations };
+  return { text: cleanedText, citations };
 }
