@@ -33,7 +33,7 @@ User Query
 │    ├─→ LLM scores each chunk (1-10)          │
 │    └─→ Return top 8 chunks                   │
 │                                              │
-│ 6. Answer Generation (gpt-5)                 │
+│ 6. Answer Generation (gpt-4o-mini)           │
 │    ├─→ Prompt LLM with context               │
 │    ├─→ Stream tokens to UI                   │
 │    └─→ Include citation markers              │
@@ -176,7 +176,7 @@ Respond with ONLY a number between 1 and 10.
 3. Stream response tokens to UI in real-time
 4. LLM includes citation markers: `[Article ID: <uuid>]`
 
-**Model**: `gpt-5`
+**Model**: `gpt-4o-mini`
 
 **System Prompt Rules**:
 
@@ -374,7 +374,7 @@ WHERE articles.id IN (extracted_article_ids)
 
 **Answer Generation**:
 
-- Model: `gpt-5`
+- Model: `gpt-4o-mini`
 - Temperature: 0.3 (slightly creative)
 - Max tokens: 1000
 

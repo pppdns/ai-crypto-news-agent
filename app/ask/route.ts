@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
     // Stream using Vercel AI SDK
     const result = streamText({
-      model: openai('gpt-5'),
+      model: openai('gpt-4o-mini'),
       prompt,
       temperature: 0.3,
     });

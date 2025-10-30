@@ -59,7 +59,7 @@ User Question → Temporal Detection → Query Embedding (1536d)
                         ↓
             LLM Re-ranking → Top 8 chunks
                         ↓
-       Answer Generation (gpt-5) + Citations
+       Answer Generation (gpt-4o-mini) + Citations
                         ↓
               Stream to UI (Vercel AI SDK)
 ```
