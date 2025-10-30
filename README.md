@@ -149,15 +149,113 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 
 ---
 
-## 📝 Environment Variables
+## 🚀 Local Setup
+
+### Prerequisites
+
+- **Node.js 22+** - Install via [NVM](https://github.com/nvm-sh/nvm#installing-and-updating) (recommended)
+- **Docker** - Required for local Supabase ([Install Docker](https://docs.docker.com/get-docker/))
+- **OpenAI API Key** - [Get one here](https://platform.openai.com/api-keys)
+- **Firecrawl API Key** - [Sign up](https://www.firecrawl.dev/) or [self-host](https://github.com/mendableai/firecrawl)
+- **Trigger.dev Account** (optional for scheduled crawling) - [Sign up](https://trigger.dev/) or [self-host](https://trigger.dev/docs/open-source-self-hosting)
+
+### Installation
 
 ```bash
-# Required
-SUPABASE_URL=
-SUPABASE_API_KEY=  # Service role key
-OPENAI_API_KEY=
-FIRECRAWL_API_KEY=
-NODE_ENV=
+# Clone the repository
+git clone <repo-url>
+cd ai-crypto-news-agent
+
+# Install Node.js 22 (if using NVM)
+nvm install 22
+nvm use 22
+
+# Install dependencies
+npm install
+
+# Start local Supabase (requires Docker)
+npm run supabase:start
 ```
 
-See `.env.example` for the complete list.
+After Supabase starts, it will output:
+
+- `API URL` → Use as `SUPABASE_URL`
+- `Secret API key` → Use as `SUPABASE_API_KEY`
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```bash
+# Supabase (from `supabase start` output)
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_API_KEY=<secret_api_key_from_supabase_start>
+
+# OpenAI
+OPENAI_API_KEY=<your_openai_api_key>
+
+# Firecrawl
+FIRECRAWL_API_KEY=<your_firecrawl_api_key>
+
+# Environment
+NODE_ENV=development
+```
+
+### Database Setup
+
+Manually run SQL code for migrations through the Supabase UI after you start Supabase. Migrations are in `supabase/migrations/`.
+
+To regenerate TypeScript types after schema changes:
+
+```bash
+npm run supabase:gen-types:dev
+```
+
+### Running the Application
+
+```bash
+# Start Next.js dev server
+npm run dev
+```
+
+Visit [http://localhost:3000](http://localhost:3000) to use the chat interface.
+
+### Ingesting News Articles
+
+**Option 1: Manual crawl** (one-time)
+
+```bash
+npx tsx scripts/crawl-news.ts
+```
+
+**Option 2: Scheduled crawling** (every 15 minutes via Trigger.dev)
+
+```bash
+# Start Trigger.dev dev server
+npm run trigger:dev
+```
+
+See [docs/scheduled-crawling.md](docs/scheduled-crawling.md) and [Trigger.dev documentation](https://trigger.dev/docs) for production deployment.
+
+### Stopping Services
+
+```bash
+# Stop Supabase
+npm run supabase:stop
+
+# Stop Next.js (Ctrl+C in the terminal)
+# Stop Trigger.dev (Ctrl+C in the terminal)
+```
+
+---
+
+## 📝 Environment Variables Reference
+
+| Variable                        | Required | Description                                        |
+| ------------------------------- | -------- | -------------------------------------------------- |
+| `SUPABASE_URL`                  | ✅       | Supabase API URL (local: `http://127.0.0.1:54321`) |
+| `SUPABASE_API_KEY`              | ✅       | Supabase service role key (bypasses RLS)           |
+| `OPENAI_API_KEY`                | ✅       | OpenAI API key for embeddings and LLM              |
+| `FIRECRAWL_API_KEY`             | ✅       | Firecrawl API key for content extraction           |
+| `NODE_ENV`                      | ⚠️       | `development` or `production`                      |
+| `CRAWLING_MAX_ARTICLE_AGE_DAYS` | ⬜       | Max article age (default: 30 days)                 |
