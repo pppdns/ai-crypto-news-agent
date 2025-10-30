@@ -2,31 +2,29 @@
 
 ## Overview
 
-The ingestion pipeline processes crypto news articles and stores them in Supabase with embeddings. There are three ingestion methods:
+The ingestion pipeline processes crypto news articles from RSS feeds and stores them in Supabase with embeddings. There are two ingestion methods:
 
-1. **Mock Data Ingestion** (`scripts/ingest.ts`) - For testing with pre-defined articles
-2. **Manual News Crawler** (`scripts/crawl-news.ts`) - For on-demand crawling from RSS feeds
-3. **Scheduled Crawler** (`trigger/crawl-crypto-news.ts`) - **Recommended**: Automated crawling every 15 minutes via Trigger.dev
+1. **Manual News Crawler** (`scripts/crawl-news.ts`) - For on-demand crawling from RSS feeds
+2. **Scheduled Crawler** (`trigger/crawl-crypto-news.ts`) - **Recommended**: Automated crawling every 15 minutes via Trigger.dev
 
 ## Usage
 
-### Mock Data Ingestion (Testing)
-
-For testing and development with mock articles:
-
-```bash
-npx tsx scripts/ingest.ts
-```
-
 ### Manual News Crawler (On-Demand)
 
-For manual crawling from RSS feeds:
+For manual crawling from RSS feeds (useful for testing or one-off updates):
 
 ```bash
 npx tsx scripts/crawl-news.ts
 ```
 
-See [Crawler Documentation](./crawler.md) for details on the production crawler.
+This script:
+
+- Fetches articles from all configured RSS feeds
+- Scrapes content using Firecrawl
+- Chunks and embeds the text
+- Stores everything in Supabase
+
+See [Crawler Documentation](./crawler.md) for detailed implementation information.
 
 ### Scheduled Crawler (Production - Recommended)
 
@@ -34,7 +32,9 @@ The production system uses a Trigger.dev scheduled task that runs every 15 minut
 
 - **Task ID**: `crawl-crypto-news`
 - **File**: `trigger/crawl-crypto-news.ts`
-- **Schedule**: Every 15 minutes
+- **Schedule**: Every 15 minutes (cron: `*/15 * * * *`)
+- **Max Duration**: 10 minutes
+- **Retry Policy**: 2 attempts with exponential backoff
 - **Documentation**: See [Scheduled Crawling](./scheduled-crawling.md)
 
 This is the recommended approach for production as it:
@@ -43,6 +43,7 @@ This is the recommended approach for production as it:
 - Handles failures gracefully with retries
 - Provides monitoring and logging via Trigger.dev dashboard
 - Requires no manual intervention
+- Automatically updates `last_scraped_at` timestamp per source for incremental crawling
 
 ## Architecture
 
@@ -79,25 +80,44 @@ This is the recommended approach for production as it:
 - **`insertChunks()`**: Batch inserts chunks with denormalized metadata
 - **`getSources()`**: Fetches sources from database
 
-#### 6. Main Script (`scripts/ingest.ts`)
+#### 6. RSS Parser (`lib/server/rss-parser.ts`)
+
+- Fetches and parses RSS feeds from crypto news sources
+- Filters articles by `last_scraped_at` timestamp (incremental crawling)
+- Respects `CRAWLING_MAX_ARTICLE_AGE_DAYS` (default: 30 days)
+- Extracts title, URL, author, and published date
+
+#### 7. Firecrawl Scraper (`lib/server/firecrawl.ts`)
+
+- Scrapes article content using Firecrawl API
+- Extracts clean text summary using LLM
+- Returns normalized article text without HTML
+
+#### 8. Main Crawler (`lib/server/crawler.ts`)
 
 - Orchestrates the complete pipeline
-- Loads environment variables from `.env.local`
-- Processes all mock articles
-- Logs progress and statistics
+- Processes all sources sequentially
+- Updates `last_scraped_at` after each source
+- Tracks statistics and error details
 
 ## Data Flow
 
 ```
-Mock Articles → Insert Article → Check Existing → Skip if exists
-                     ↓
-              New Article
-                     ↓
-              Chunk Text (250-500 tokens with overlap)
-                     ↓
-              Generate Embeddings (batch, 1536 dims)
-                     ↓
-              Insert Chunks with denormalized metadata
+RSS Feeds → Parse Feed → Filter by Date → For each article:
+                                              ↓
+                                     Check if exists by URL hash
+                                              ↓
+                                     Scrape with Firecrawl (LLM extraction)
+                                              ↓
+                                     Insert Article → Get article ID
+                                              ↓
+                                     Chunk Text (250-500 tokens, 10-20% overlap)
+                                              ↓
+                                     Generate Embeddings (batch, 1536 dims, L2-normalized)
+                                              ↓
+                                     Insert Chunks with denormalized metadata
+                                              ↓
+                                     Update source.last_scraped_at
 ```
 
 ## Idempotency
@@ -110,45 +130,65 @@ The pipeline is fully idempotent:
 
 ## Results
 
-### Successful Run Statistics
+### Example Successful Run Statistics
 
 ```
 📊 Statistics:
-   Total articles processed: 36
-   New articles inserted:    36
-   Existing articles (skip): 0
-   Total chunks created:     41
-   Average chunks/article:   1.1
-   Total tokens:             10,775
-   Average tokens/chunk:     263
+   Sources processed:        6
+   Articles found:           45
+   New articles ingested:    38
+   Existing articles (skip): 7
+   Total chunks created:     412
+   Average chunks/article:   10.8
+   Total tokens:             95,847
+   Average tokens/chunk:     233
+   Errors:                   0
+   Processing time:          142.35 seconds
 ```
 
 ### Database Verification
 
-- ✅ 36 articles in `articles` table
-- ✅ 41 chunks in `article_chunks` table
-- ✅ All embeddings stored as vector(1536)
+After a successful crawl run:
+
+- ✅ Articles in `articles` table with unique `url_hash`
+- ✅ Chunks in `article_chunks` table with 1536-dim embeddings
+- ✅ All embeddings L2-normalized for cosine similarity
 - ✅ Denormalized metadata present (title, source_name, published_at)
+- ✅ `last_scraped_at` updated for each source
+- ✅ Full-text search index (`tsvector`) auto-generated on articles
 
 ## Key Features
 
-1. **Accurate Token Counting**: Uses tiktoken (OpenAI's official tokenizer)
-2. **Efficient Embeddings**: Batch generation with OpenAI SDK
-3. **Optimal Vector Size**: 1536 dimensions for HNSW index compatibility
-4. **Idempotent**: Safe to re-run without duplicates
-5. **Denormalized Metadata**: Optimized for query performance
-6. **L2-Normalized Embeddings**: Ready for cosine similarity search
+1. **RSS-Based Ingestion**: Automatically discovers new articles from configured sources
+2. **Incremental Crawling**: Tracks `last_scraped_at` per source to avoid re-processing
+3. **Firecrawl Integration**: LLM-powered content extraction from HTML
+4. **Accurate Token Counting**: Uses tiktoken (OpenAI's official tokenizer)
+5. **Efficient Embeddings**: Batch generation with OpenAI SDK
+6. **Optimal Vector Size**: 1536 dimensions for HNSW index compatibility
+7. **Idempotent**: Safe to re-run without duplicates (URL hash deduplication)
+8. **Denormalized Metadata**: Optimized for query performance
+9. **L2-Normalized Embeddings**: Ready for cosine similarity search
+10. **Error Handling**: Continues processing even if individual articles fail
+11. **Comprehensive Logging**: Detailed progress and statistics tracking
 
 ## Dependencies
 
 - `tsx`: Run TypeScript files directly
 - `tiktoken`: Accurate OpenAI token counting
 - `openai`: Official OpenAI SDK for embeddings
-- `nextjs`: Load environment variables
+- `rss-parser`: Parse RSS/Atom feeds
+- `@mendable/firecrawl-js`: Article content extraction
+- `@trigger.dev/sdk`: Scheduled task orchestration (production)
 
-## Next Steps
+## Environment Variables
 
-1. Implement hybrid search (vector + FTS)
-2. Add re-ranking with LLM
-3. Build answer generation with citations
-4. Create chat UI
+Required for both manual and scheduled crawling:
+
+- `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
+- `SUPABASE_API_KEY` or `SUPABASE_SECRET_KEY`: Service role key (bypasses RLS)
+- `OPENAI_API_KEY`: OpenAI API key for embeddings
+- `FIRECRAWL_API_KEY`: Firecrawl API key for content extraction
+
+Optional configuration:
+
+- `CRAWLING_MAX_ARTICLE_AGE_DAYS`: Maximum article age to crawl (default: 30 days)
