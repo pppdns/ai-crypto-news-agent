@@ -6,6 +6,8 @@ export const metadata = {
   description: 'Latest cryptocurrency news articles',
 };
 
+export const dynamic = 'force-dynamic';
+
 interface ArticleWithSource {
   id: string;
   title: string | null;
