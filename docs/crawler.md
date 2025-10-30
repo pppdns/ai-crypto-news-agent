@@ -62,7 +62,8 @@ Responsible for parsing RSS feeds and extracting article metadata.
 
 - Natively supports RSS 1.0, RSS 2.0, and Atom feeds via rss-parser library
 - Custom User-Agent header to avoid 403 errors from bot-blocking servers
-- Library handles feed format detection automatically without additional configuration
+- Defaults to RSS 2.0 for feeds that don't explicitly declare their version
+- Handles feeds with non-standard attributes (e.g., Cointelegraph missing version attribute)
 
 **Error Handling:**
 

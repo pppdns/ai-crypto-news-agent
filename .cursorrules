@@ -52,7 +52,7 @@ Crypto news is noisy, specialized, and time-sensitive. These choices directly op
 
 Tables:
 
-- `sources(id, name, homepage_url, rss_url)`
+- `sources(id, name, homepage_url, rss_url, last_scraped_at)`
 - `articles(id, source_id, url, url_hash, title, author, published_at, fetched_at, text_summary, tsvector)`
 - `article_chunks(id, article_id, chunk_index, content, title, source_name, published_at, embedding, token_count)`
 
@@ -118,7 +118,9 @@ Reliability and normalization:
 - Normalize URLs before hashing (strip params, lowercase host, remove trailing slash, follow redirects, prefer canonical link).
 - Enforce `ON CONFLICT DO NOTHING` on `url_hash` during insert.
 - If a URL has already been loaded and its content extracted via Firecrawl, don't load it again.
-- Persist last seen `pubDate` per source to support incremental ingestion. Batch embeddings and upserts.
+- Track `last_scraped_at` timestamp per source to support incremental ingestion. Only scrape articles newer than this timestamp.
+- Articles older than 30 days (configurable via `CRAWLING_MAX_ARTICLE_AGE_DAYS`) are never scraped.
+- Batch embeddings and upserts for efficiency.
 
 ## Search Feature Requirements
 

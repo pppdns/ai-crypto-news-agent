@@ -27,7 +27,7 @@ export const Citations: React.FC<CitationsProps> = ({ citations, className = '' 
             href={citation.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block rounded border border-gray-100 bg-white p-2 transition-colors hover:bg-gray-100/50"
+            className="block rounded border border-gray-100 bg-white p-2 transition-colors hover:border-gray-400"
           >
             <div className="flex flex-col gap-0.5">
               <h5 className="text-default-700 text-xs font-normal">{citation.title}</h5>

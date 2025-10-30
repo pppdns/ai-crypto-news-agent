@@ -152,9 +152,26 @@ Once the mock data is loaded, test with these queries:
 
 After testing with mock data:
 
-1. Verify the ingestion script works with this data
-2. Confirm embeddings are generated correctly
-3. Test hybrid search returns relevant results
-4. Validate re-ranking improves relevance
-5. Check answer generation cites sources properly
-6. Switch to real RSS feeds when ready for production
+1. ✅ Verify the ingestion script works with this data
+2. ✅ Confirm embeddings are generated correctly
+3. ✅ Test hybrid search returns relevant results
+4. ✅ Validate re-ranking improves relevance
+5. ✅ Check answer generation cites sources properly
+6. ✅ **Production Ready**: Use `scripts/crawl-news.ts` for real RSS feed ingestion
+
+## Production Ingestion
+
+For real-time news crawling, use the production crawler:
+
+```bash
+npx tsx scripts/crawl-news.ts
+```
+
+The crawler:
+
+- Parses RSS feeds from Cointelegraph, CryptoPotato, and NewsBTC
+- Scrapes articles with Firecrawl
+- Supports incremental ingestion (only processes new articles)
+- Handles RSS 2.0 and Atom feeds
+- Includes User-Agent headers to avoid 403 errors
+- See `docs/crawler.md` for complete documentation

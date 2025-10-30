@@ -2,15 +2,30 @@
 
 ## Overview
 
-The ingestion pipeline loads mock crypto news articles into Supabase, including article insertion, paragraph-based chunking, OpenAI embedding generation, and storage in the vector database.
+The ingestion pipeline processes crypto news articles and stores them in Supabase with embeddings. There are two ingestion methods:
+
+1. **Mock Data Ingestion** (`scripts/ingest.ts`) - For testing with pre-defined articles
+2. **Live News Crawler** (`scripts/crawl-news.ts`) - For production with real RSS feeds
 
 ## Usage
 
-Run the ingestion script:
+### Mock Data Ingestion (Testing)
+
+For testing and development with mock articles:
 
 ```bash
 npx tsx scripts/ingest.ts
 ```
+
+### Live News Crawler (Production)
+
+For real-time news ingestion from RSS feeds:
+
+```bash
+npx tsx scripts/crawl-news.ts
+```
+
+See [Crawler Documentation](./crawler.md) for details on the production crawler.
 
 ## Architecture
 

@@ -31,6 +31,8 @@ export async function parseRssFeed(feedUrl: string, lastScrapedAt?: string | nul
       'User-Agent': 'Mozilla/5.0 (compatible; CryptoNewsBot/1.0; +https://example.com/bot)',
       Accept: 'application/rss+xml, application/xml, application/atom+xml, text/xml, */*',
     },
+    // Default to RSS 2.0 for feeds that don't specify version attribute (e.g., Cointelegraph)
+    defaultRSS: 2.0,
   });
 
   try {

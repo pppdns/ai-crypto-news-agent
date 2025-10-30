@@ -20,7 +20,7 @@ export default function Component({ input, setInput, sendMessage, isLoading }: P
     'Latest Bitcoin news?',
     'How did XRP perform this week?',
     'What is the latest news on the SEC vs Binance lawsuit?',
-    'What are the recent Norwegian tax changes related to crypto?',
+    "How did Trump's China tariff announcements affect Bitcoin prices?",
   ];
 
   // Auto-focus the input on page load

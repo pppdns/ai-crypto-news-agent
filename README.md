@@ -5,9 +5,12 @@ A Next.js application that answers crypto questions using fresh, grounded news. 
 ## How it works
 
 1. Ingestion
-   - Fetches RSS items from Cointelegraph, CryptoPotato, and NewsBTC, then loads article HTML.
-   - Extracts a clean plain‑text summary per article (via Firecrawl).
+   - Fetches RSS items from Cointelegraph, CryptoPotato, and NewsBTC.
+   - Filters articles by date (newer than `last_scraped_at` per source, max 30 days old).
+   - Scrapes article URLs with Firecrawl to extract clean plain‑text summaries.
+   - Deduplicates by normalized URL hash before processing.
    - Persists article metadata and summary to Supabase Postgres.
+   - Updates `last_scraped_at` timestamp for incremental ingestion on subsequent runs.
 
 2. Chunking
    - Splits the article summary into paragraph‑sized chunks targeting 250–500 tokens with ~10–20% overlap.
@@ -17,7 +20,7 @@ A Next.js application that answers crypto questions using fresh, grounded news. 
 
 4. Storage & Indexing
    - Tables
-     - `sources(id, name, homepage_url, rss_url)`
+     - `sources(id, name, homepage_url, rss_url, last_scraped_at)`
      - `articles(id, source_id, url, url_hash, title, author, published_at, fetched_at, text_summary, tsvector)`
      - `article_chunks(id, article_id, chunk_index, content, title, source_name, published_at, embedding, token_count)`
    - Indexes
