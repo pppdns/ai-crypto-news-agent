@@ -43,6 +43,16 @@ export default function Component({ input, setInput, sendMessage, isLoading }: P
     sendMessage(suggestion);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Submit on Enter (without Shift)
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!input.trim() || isLoading) return;
+      const userMessage = input.trim();
+      sendMessage(userMessage);
+    }
+  };
+
   return (
     <div className="flex w-full flex-col gap-4">
       <ScrollShadow hideScrollBar className="flex flex-nowrap gap-2" orientation="horizontal">
@@ -50,7 +60,7 @@ export default function Component({ input, setInput, sendMessage, isLoading }: P
           {ideas.map((idea, index) => (
             <div key={index} className="text-left text-sm">
               <Button
-                className="h-8 w-full bg-gray-100 text-left text-sm"
+                className="h-auto min-h-8 w-full bg-gray-100 py-2 text-left text-sm whitespace-normal"
                 variant="flat"
                 size="sm"
                 isDisabled={isLoading}
@@ -104,6 +114,7 @@ export default function Component({ input, setInput, sendMessage, isLoading }: P
           value={input}
           variant="bordered"
           onValueChange={setInput}
+          onKeyDown={handleKeyDown}
           isDisabled={isLoading}
         />
       </form>
