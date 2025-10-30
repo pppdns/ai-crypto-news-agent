@@ -13,8 +13,8 @@
  *   npx tsx scripts/ingest.ts
  *
  * Environment variables required:
- *   - NEXT_PUBLIC_SUPABASE_URL
- *   - SUPABASE_SECRET_KEY
+ *   - SUPABASE_URL
+ *   - SUPABASE_API_KEY
  *   - OPENAI_API_KEY
  */
 import { loadEnv } from '@/lib/server/load-env';
@@ -25,13 +25,13 @@ import { getSources, insertArticle, insertChunks } from '../lib/server/ingestion
 
 // Validate environment variables
 function validateEnv(): void {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_API_KEY || process.env.SUPABASE_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
 
   const missing: string[] = [];
-  if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL');
-  if (!supabaseKey) missing.push('SUPABASE_SECRET_KEY or SUPABASE_API_KEY');
+  if (!supabaseUrl) missing.push('SUPABASE_URL or SUPABASE_URL');
+  if (!supabaseKey) missing.push('SUPABASE_API_KEY or SUPABASE_API_KEY');
   if (!openaiKey) missing.push('OPENAI_API_KEY');
 
   if (missing.length > 0) {
