@@ -23,6 +23,7 @@ User Query
 │ 3. Hybrid Search                             │
 │    ├─→ Vector similarity (70%)               │
 │    ├─→ Full-text search (30%)                │
+│    ├─→ Recency decay (10% per week)          │
 │    └─→ Return top 40 candidates              │
 │                                              │
 │ 4. Conditional Routing (LangGraph)           │

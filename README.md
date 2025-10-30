@@ -49,19 +49,43 @@ Ingests crypto news from **6 major publishers** → Indexes with **hybrid vector
 The core of the system — a LangGraph-orchestrated pipeline optimized for accuracy and speed:
 
 ```
-User Question → Temporal Detection → Query Embedding (1536d)
-                        ↓
-            Hybrid Search (40 candidates)
-       0.70 vector + 0.30 FTS + recency decay
-                        ↓
-         Conditional Routing ⚡ (LangGraph)
-       < 10 results: skip | ≥ 10: rerank
-                        ↓
-            LLM Re-ranking → Top 8 chunks
-                        ↓
-       Answer Generation (gpt-4o-mini) + Citations
-                        ↓
-              Stream to UI (Vercel AI SDK)
+User Query
+    ↓
+┌──────────────────────────────────────────────┐
+│     LangGraph RAG Pipeline Workflow          │
+├──────────────────────────────────────────────┤
+│ 1. Temporal Detection                        │
+│    └─→ Extract time context (days)           │
+│                                              │
+│ 2. Query Embedding                           │
+│    └─→ Generate 1536-dim vector              │
+│                                              │
+│ 3. Hybrid Search                             │
+│    ├─→ Vector similarity (70%)               │
+│    ├─→ Full-text search (30%)                │
+│    ├─→ Recency decay (10% per week)          │
+│    └─→ Return top 40 candidates              │
+│                                              │
+│ 4. Conditional Routing (LangGraph)           │
+│    ├─→ < 10 candidates: Skip rerank          │
+│    └─→ ≥ 10 candidates: LLM rerank           │
+│                                              │
+│ 5. Re-ranking (Conditional)                  │
+│    ├─→ LLM scores each chunk (1-10)          │
+│    └─→ Return top 8 chunks                   │
+│                                              │
+│ 6. Answer Generation (gpt-4o-mini)           │
+│    ├─→ Prompt LLM with context               │
+│    ├─→ Stream tokens to UI                   │
+│    └─→ Include citation markers              │
+│                                              │
+│ 7. Citation Enrichment                       │
+│    ├─→ Extract article IDs                   │
+│    ├─→ Fetch metadata from DB                │
+│    └─→ Return enriched citations             │
+└──────────────────────────────────────────────┘
+    ↓
+Streaming Response (Vercel AI SDK) + Citations
 ```
 
 **Key Choices:**
