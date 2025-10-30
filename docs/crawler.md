@@ -469,7 +469,7 @@ Key metrics to monitor in production:
 
 ### Current Limitations
 
-1. **No Pagination**: RSS feeds return limited items (typically 20-200 most recent)
+1. **No Pagination**: RSS feeds return limited items (typically 20-50 most recent)
 2. **Sequential Processing**: Slow for large numbers of articles
 3. **No Priority Queue**: All articles treated equally
 4. **Limited Error Recovery**: Failed articles are skipped permanently

@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-100 p-4 pb-12 sm:p-12">
       <Card className="mx-auto max-w-7xl p-6">
-        <CardHeader className="mb-4 flex-row items-start justify-between border-b border-slate-200 pb-4">
+        <CardHeader className="mb-4 flex-row flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="flex flex-col gap-2">
             <p className="text-2xl font-bold">Ask a Question</p>
             <p className="text-sm text-slate-600">Get answers about the latest cryptocurrency news</p>

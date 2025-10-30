@@ -130,7 +130,7 @@ export default function Component({
           sendMessage={sendMessage}
           isLoading={isLoading}
         />
-        <p className="text-tiny mt-2 flex items-center gap-1 px-2 font-semibold text-amber-500">
+        <p className="text-tiny mt-2 flex flex-wrap items-center gap-1 px-2 font-semibold text-amber-500">
           <TriangleAlert className="mr-1 inline-block h-4 w-4" />
           Only news articles since <span className="underline">Oct 29, 2025</span> are included in the database.
           <a href="/news" className="underline">
