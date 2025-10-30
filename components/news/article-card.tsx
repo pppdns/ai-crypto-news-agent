@@ -10,12 +10,15 @@ interface ArticleCardProps {
 }
 
 export function ArticleCard({ title, url, text_summary, source_name, published_at }: ArticleCardProps) {
-  // Format the date nicely
-  const formattedDate = published_at
-    ? new Date(published_at).toLocaleDateString('en-US', {
+  // Format the date and time in the user's local timezone
+  const formattedDateTime = published_at
+    ? new Date(published_at).toLocaleString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
       })
     : 'Unknown date';
 
@@ -34,7 +37,7 @@ export function ArticleCard({ title, url, text_summary, source_name, published_a
         <div className="flex items-center gap-2 text-sm text-slate-500">
           <span className="text-primary font-medium">{source_name}</span>
           <span>•</span>
-          <span>{formattedDate}</span>
+          <span>{formattedDateTime}</span>
         </div>
       </CardHeader>
       <CardBody className="pt-0">
