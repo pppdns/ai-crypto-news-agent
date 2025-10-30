@@ -197,7 +197,6 @@ A working user flow:
 | Limitation                                                     | Impact                              |
 | -------------------------------------------------------------- | ----------------------------------- |
 | English only                                                   | No non-English crypto coverage      |
-| No realtime ingestion scheduling                               | Updates require manual run          |
 | Limited to RSS + article HTML                                  | No price or blockchain data         |
 | Reranker adds latency at scale                                 | OK for demo; not optimized yet      |
 | Vector database, embeddings, chunking, retrieval not optimized | OK for demo                         |
@@ -249,11 +248,10 @@ Acceptable for a prototype.
 
 ### Background Jobs
 
-- **Trigger.dev** - For background data ingestion tasks
+- **Trigger.dev** - Scheduled task runs every 15 minutes to automatically crawl and ingest crypto news
 
 ## Future Enhancements
 
-- Automated periodic ingestion (cron job / Edge scheduler)
 - Query intent classification for better recency filtering and search
 - Use local cross-encoder for scaling re-ranking
 - Add caching for repeated queries

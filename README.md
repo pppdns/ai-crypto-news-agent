@@ -192,4 +192,4 @@ QUERY PATH (LangGraph Workflow)
 
 ### Background Jobs
 
-- **Trigger.dev** - For background data ingestion tasks
+- **Trigger.dev** - Scheduled task runs every 15 minutes to automatically crawl and ingest crypto news (see `docs/scheduled-crawling.md`)

@@ -30,6 +30,7 @@
     "@langchain/langgraph": "^1.0.1",
     "@mendable/firecrawl-js": "^4.4.1",
     "@supabase/supabase-js": "^2.76.1",
+    "@trigger.dev/sdk": "^4.0.5",
     "@types/markdown-it": "^14.1.2",
     "@types/sanitize-html": "^2.16.0",
     "ai": "^5.0.81",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@trigger.dev/build": "^4.0.5",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "@types/node": "^20",
     "@types/react": "^19",

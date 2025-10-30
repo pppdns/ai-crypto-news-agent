@@ -2,10 +2,11 @@
 
 ## Overview
 
-The ingestion pipeline processes crypto news articles and stores them in Supabase with embeddings. There are two ingestion methods:
+The ingestion pipeline processes crypto news articles and stores them in Supabase with embeddings. There are three ingestion methods:
 
 1. **Mock Data Ingestion** (`scripts/ingest.ts`) - For testing with pre-defined articles
-2. **Live News Crawler** (`scripts/crawl-news.ts`) - For production with real RSS feeds
+2. **Manual News Crawler** (`scripts/crawl-news.ts`) - For on-demand crawling from RSS feeds
+3. **Scheduled Crawler** (`trigger/crawl-crypto-news.ts`) - **Recommended**: Automated crawling every 15 minutes via Trigger.dev
 
 ## Usage
 
@@ -17,15 +18,31 @@ For testing and development with mock articles:
 npx tsx scripts/ingest.ts
 ```
 
-### Live News Crawler (Production)
+### Manual News Crawler (On-Demand)
 
-For real-time news ingestion from RSS feeds:
+For manual crawling from RSS feeds:
 
 ```bash
 npx tsx scripts/crawl-news.ts
 ```
 
 See [Crawler Documentation](./crawler.md) for details on the production crawler.
+
+### Scheduled Crawler (Production - Recommended)
+
+The production system uses a Trigger.dev scheduled task that runs every 15 minutes automatically:
+
+- **Task ID**: `crawl-crypto-news`
+- **File**: `trigger/crawl-crypto-news.ts`
+- **Schedule**: Every 15 minutes
+- **Documentation**: See [Scheduled Crawling](./scheduled-crawling.md)
+
+This is the recommended approach for production as it:
+
+- Ensures continuous fresh data ingestion
+- Handles failures gracefully with retries
+- Provides monitoring and logging via Trigger.dev dashboard
+- Requires no manual intervention
 
 ## Architecture
 
