@@ -105,6 +105,7 @@ export type Database = {
           created_at: string;
           homepage_url: string;
           id: string;
+          last_scraped_at: string | null;
           name: string;
           rss_url: string;
         };
@@ -112,6 +113,7 @@ export type Database = {
           created_at?: string;
           homepage_url: string;
           id?: string;
+          last_scraped_at?: string | null;
           name: string;
           rss_url: string;
         };
@@ -119,6 +121,7 @@ export type Database = {
           created_at?: string;
           homepage_url?: string;
           id?: string;
+          last_scraped_at?: string | null;
           name?: string;
           rss_url?: string;
         };

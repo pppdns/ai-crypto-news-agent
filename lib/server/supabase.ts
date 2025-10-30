@@ -1,6 +1,6 @@
 /**
  * Server-side Supabase client
- * Uses SUPABASE_SECRET_KEY for backend operations (bypasses RLS)
+ * Uses SUPABASE_API_KEY for backend operations (bypasses RLS)
  */
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/supabase/database.types';
@@ -9,15 +9,15 @@ import type { Database } from '@/supabase/database.types';
  * Validate required environment variables
  */
 function validateEnv(): { supabaseUrl: string; supabaseKey: string } {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_API_KEY;
 
   if (!supabaseUrl) {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL environment variable');
+    throw new Error('Missing SUPABASE_URL environment variable');
   }
 
   if (!supabaseKey) {
-    throw new Error('Missing SUPABASE_SECRET_KEY or SUPABASE_API_KEY environment variable');
+    throw new Error('Missing SUPABASE_API_KEY environment variable');
   }
 
   return { supabaseUrl, supabaseKey };
