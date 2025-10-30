@@ -18,7 +18,8 @@ import type { RAGState } from './types';
 const LLM_MODEL = 'gpt-4o-mini' as const;
 const LLM_TEMPERATURE = 0.3;
 const LLM_MAX_TOKENS = 1000;
-const RERANK_THRESHOLD = 10;
+const RERANK_THRESHOLD = 50; // Disable re-ranking for now
+// const RERANK_THRESHOLD = 10;
 const MAX_CHUNKS = 8;
 const CANDIDATE_LIMIT = 40;
 const DEFAULT_TEMPORAL_WINDOW_DAYS = 21;
