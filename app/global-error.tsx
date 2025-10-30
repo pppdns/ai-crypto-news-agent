@@ -4,7 +4,7 @@
 import Error from 'next/error';
 import { Inter } from 'next/font/google';
 import { useEffect } from 'react';
-// import * as Sentry from '@sentry/nextjs';
+import * as Sentry from '@sentry/nextjs';
 // import { Analytics } from '@vercel/analytics/react';
 import { Frown } from 'lucide-react';
 
@@ -16,9 +16,8 @@ const inter = Inter({
 export default function GlobalError({ error }: { error: Error & { digest?: string; message?: string } }) {
   useEffect(() => {
     console.error(error);
-    // TODO:
     // Log the error to Sentry
-    // Sentry.captureException(error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (
