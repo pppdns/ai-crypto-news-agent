@@ -313,7 +313,7 @@ npx tsx scripts/crawl-news.ts
 
 🚀 Starting news crawler...
 
-📋 Found 3 sources to process
+📋 Found 6 sources to process
 
 ============================================================
 📰 Processing: Cointelegraph
@@ -340,16 +340,16 @@ npx tsx scripts/crawl-news.ts
 ✨ Crawl Complete!
 ═══════════════════════════════════════════════════
 📊 Statistics:
-   Sources processed:        3
-   Articles found:           67
-   New articles ingested:    45
-   Existing articles (skip): 22
-   Total chunks created:     138
+   Sources processed:        6
+   Articles found:           134
+   New articles ingested:    90
+   Existing articles (skip): 44
+   Total chunks created:     276
    Average chunks/article:   3.1
-   Total tokens:             36,742
+   Total tokens:             73,484
    Average tokens/chunk:     266
-   Errors:                   2
-   Processing time:          127.45 seconds
+   Errors:                   4
+   Processing time:          254.90 seconds
 ═══════════════════════════════════════════════════
 ```
 

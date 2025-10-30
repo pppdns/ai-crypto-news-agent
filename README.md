@@ -5,7 +5,7 @@ A Next.js application that answers crypto questions using fresh, grounded news. 
 ## How it works
 
 1. Ingestion
-   - Fetches RSS items from Cointelegraph, CryptoPotato, and NewsBTC.
+   - Fetches RSS items from Cointelegraph, CryptoPotato, NewsBTC, 99Bitcoins, Crypto Briefing, and ZyCrypto.
    - Filters articles by date (newer than `last_scraped_at` per source, max 30 days old).
    - Scrapes article URLs with Firecrawl to extract clean plain‑text summaries.
    - Deduplicates by normalized URL hash before processing.
