@@ -1,11 +1,27 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Button, Card, CardHeader } from '@heroui/react';
 import { Newspaper } from 'lucide-react';
 import PromptContainerWithConversation from '@/components/chat/prompt-container-with-conversation';
 
 export default function Home() {
+  const [articleCount, setArticleCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/articles/count')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.count !== undefined) {
+          setArticleCount(data.count);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to fetch article count:', error);
+      });
+  }, []);
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-100 p-4 pb-12 sm:p-12">
       <Card className="mx-auto max-w-7xl p-6">
@@ -22,7 +38,7 @@ export default function Home() {
             startContent={<Newspaper className="h-4 w-4 shrink-0" />}
             className="shrink-0"
           >
-            List All Articles
+            {articleCount !== null ? `List All Articles (${articleCount})` : 'List All Articles'}
           </Button>
         </CardHeader>
         <PromptContainerWithConversation />
