@@ -67,8 +67,7 @@ export async function crawlNews(): Promise<CrawlStats> {
   }
 
   if (!sources || sources.length === 0) {
-    console.log('⚠️  No sources found in database');
-    return stats;
+    throw new Error('No sources found in database');
   }
 
   console.log(`📋 Found ${sources.length} sources to process\n`);

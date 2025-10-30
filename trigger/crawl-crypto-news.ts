@@ -23,6 +23,13 @@ export const crawlCryptoNewsTask = schedules.task({
   cron: '*/15 * * * *',
   // Set max duration to 10 minutes (allow plenty of time for scraping)
   maxDuration: 600, // 10 minutes in seconds
+  retry: {
+    maxAttempts: 2,
+    minTimeoutInMs: 1000,
+    maxTimeoutInMs: 10000,
+    factor: 2,
+    randomize: true,
+  },
   run: async (payload) => {
     const startTime = Date.now();
 
