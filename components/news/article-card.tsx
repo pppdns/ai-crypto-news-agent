@@ -9,18 +9,36 @@ interface ArticleCardProps {
   published_at: string | null;
 }
 
+function getRelativeTime(dateString: string): string {
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffMs = now.getTime() - past.getTime();
+
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) {
+    return 'just now';
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
+  } else if (diffHours < 24) {
+    return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+  } else if (diffDays < 30) {
+    return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+  } else {
+    // Fall back to formatted date for older articles
+    return past.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+}
+
 export function ArticleCard({ title, url, text_summary, source_name, published_at }: ArticleCardProps) {
-  // Format the date and time in the user's local timezone
-  const formattedDateTime = published_at
-    ? new Date(published_at).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      })
-    : 'Unknown date';
+  // Format as relative time (e.g., "2 hours ago", "3 days ago")
+  const formattedDateTime = published_at ? getRelativeTime(published_at) : 'Unknown date';
 
   return (
     <Card className="transition-shadow hover:shadow-lg">
