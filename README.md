@@ -44,23 +44,37 @@ Ingests crypto news from **6 major publishers** → Indexes with **hybrid vector
 
 📖 **Details:** [docs/scheduled-crawling.md](docs/scheduled-crawling.md) | [docs/ingestion-pipeline.md](docs/ingestion-pipeline.md) | [docs/crawler.md](docs/crawler.md)
 
-### RAG Pipeline (Query Path)
+### 🧠 RAG Pipeline (Query Path)
+
+The core of the system — a LangGraph-orchestrated pipeline optimized for accuracy and speed:
 
 ```
-User Question → Temporal Detection → Query Embedding
+User Question → Temporal Detection → Query Embedding (1536d)
                         ↓
             Hybrid Search (40 candidates)
        0.70 vector + 0.30 FTS + recency decay
                         ↓
-            Conditional Re-ranking ⚡
-       < 10 results: skip | ≥ 10: LLM rerank → top 8
+         Conditional Routing ⚡ (LangGraph)
+       < 10 results: skip | ≥ 10: rerank
                         ↓
-              Answer Generation + Citations
+            LLM Re-ranking → Top 8 chunks
+                        ↓
+       Answer Generation (gpt-5) + Citations
                         ↓
               Stream to UI (Vercel AI SDK)
 ```
 
-**LangGraph orchestrates** the workflow with conditional routing for optimal cost/latency.
+**Key Choices:**
+
+- **LangGraph orchestration**: StateGraph with conditional routing skips re-ranking when < 10 candidates (cost/latency optimization)
+- **Temporal detection**: Keyword-based recency filtering (N days) for time-sensitive queries
+- **HNSW indexing**: 97-99% recall with `m=16, ef_construction=64`
+- **Weighted scoring**: 70% semantic + 30% keyword prevents drift to generic finance news
+- **Score normalization**: Both vector and FTS normalized to 0-1 before combining
+- **Recency decay**: Gentle 10% decay per week favors fresh content
+- **LLM re-ranking**: `gpt-4o-mini` scores 40→8 for precision (2-5s overhead, conditionally skipped; This should be replaced by a local cross-encoder)
+- **Strict grounding**: System prompt enforces citation-only responses, returns "No recent news" instead of hallucinating
+- **Citation tracking**: Extracts article IDs from LLM, enriches with metadata, deduplicates by URL
 
 📖 **Details:** [docs/rag-pipeline.md](docs/rag-pipeline.md)
 

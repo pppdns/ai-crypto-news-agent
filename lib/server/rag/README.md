@@ -12,7 +12,7 @@ lib/server/rag/
 ├── reranker.ts               # LLM-based re-ranking
 ├── citations.ts              # Citation parsing & enrichment
 ├── prompts.ts                # LLM prompts
-├── workflow.ts               # Sequential pipeline orchestration
+├── workflow.ts               # LangGraph workflow orchestration
 └── README.md                 # This file
 ```
 
@@ -85,7 +85,7 @@ Core TypeScript interfaces used throughout the pipeline.
 
 **Key Types**:
 
-- `RAGState`: Sequential pipeline state
+- `RAGState`: LangGraph workflow state
 - `Chunk`: Article chunk with metadata
 - `Citation`: UI-ready citation format
 - `TemporalWindow`: Recency filtering config

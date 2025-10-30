@@ -12,7 +12,7 @@ The AI Crypto News Agent uses a sophisticated Retrieval-Augmented Generation (RA
 User Query
     ↓
 ┌──────────────────────────────────────────────┐
-│       Sequential RAG Pipeline Workflow       │
+│     LangGraph RAG Pipeline Workflow          │
 ├──────────────────────────────────────────────┤
 │ 1. Temporal Detection                        │
 │    └─→ Extract time context (days)           │
@@ -25,16 +25,20 @@ User Query
 │    ├─→ Full-text search (30%)                │
 │    └─→ Return top 40 candidates              │
 │                                              │
-│ 4. Re-ranking                                │
+│ 4. Conditional Routing (LangGraph)           │
+│    ├─→ < 10 candidates: Skip rerank          │
+│    └─→ ≥ 10 candidates: LLM rerank           │
+│                                              │
+│ 5. Re-ranking (Conditional)                  │
 │    ├─→ LLM scores each chunk (1-10)          │
 │    └─→ Return top 8 chunks                   │
 │                                              │
-│ 5. Answer Generation                         │
+│ 6. Answer Generation (gpt-5)                 │
 │    ├─→ Prompt LLM with context               │
 │    ├─→ Stream tokens to UI                   │
 │    └─→ Include citation markers              │
 │                                              │
-│ 6. Citation Enrichment                       │
+│ 7. Citation Enrichment                       │
 │    ├─→ Extract article IDs                   │
 │    ├─→ Fetch metadata from DB                │
 │    └─→ Return enriched citations             │
@@ -172,7 +176,7 @@ Respond with ONLY a number between 1 and 10.
 3. Stream response tokens to UI in real-time
 4. LLM includes citation markers: `[Article ID: <uuid>]`
 
-**Model**: `gpt-4o-mini`
+**Model**: `gpt-5`
 
 **System Prompt Rules**:
 
@@ -281,32 +285,39 @@ WHERE articles.id IN (extracted_article_ids)
 
 ## Technology Stack
 
-### Sequential Pipeline Architecture
+### LangGraph Orchestration
 
-**Implementation**: Custom sequential workflow in TypeScript
+**Implementation**: LangGraph 1.0.1 StateGraph with conditional routing
 
-**State Management**: Manual state passing with `RAGState` interface
+**State Management**: LangGraph Annotation API with type-safe `RAGState` interface
 
 **Nodes**:
 
 - `detectTemporal`: Temporal window detection
 - `generateEmbedding`: Query embedding generation
 - `hybridSearch`: Hybrid retrieval
-- `rerank`: LLM re-ranking
+- `skipRerank`: Pass-through node when < 10 candidates
+- `rerank`: LLM re-ranking (conditionally executed)
 - `generateAnswer`: Answer generation
 - `enrichCitations`: Citation enrichment
 
-**Execution**: Linear flow with error handling at each node
+**Execution**: StateGraph with conditional routing based on candidate count
+
+**Conditional Routing**:
+
+- After `hybridSearch`, routes to:
+  - `END` if error or no candidates
+  - `skipRerank` if < 10 candidates (cost optimization)
+  - `rerank` if ≥ 10 candidates (full LLM scoring)
+- Both `skipRerank` and `rerank` converge at `generateAnswer`
 
 **Benefits**:
 
-- Simple and maintainable
-- Full type safety
-- Explicit state transitions
-- Easy to debug and trace
-- No external orchestration dependencies
-
-**Note**: Originally designed to use LangGraph, but implemented as a sequential pipeline for better TypeScript compatibility and simpler maintenance.
+- Intelligent cost/latency optimization via conditional routing
+- Type-safe state management with Annotation API
+- Declarative workflow definition
+- Built-in error handling and state transitions
+- Explicit control flow with visual graph structure
 
 ### Vector Database
 
@@ -363,7 +374,7 @@ WHERE articles.id IN (extracted_article_ids)
 
 **Answer Generation**:
 
-- Model: `gpt-4o-mini`
+- Model: `gpt-5`
 - Temperature: 0.3 (slightly creative)
 - Max tokens: 1000
 
