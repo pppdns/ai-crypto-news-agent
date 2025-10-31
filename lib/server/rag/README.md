@@ -23,13 +23,15 @@ lib/server/rag/
 ```typescript
 import { executeRAGWorkflow } from '@/lib/server/rag/workflow';
 
-// Execute complete RAG pipeline
+// Execute RAG retrieval workflow
 const result = await executeRAGWorkflow('What happened with Bitcoin today?');
 
 // Access results
-console.log(result.answer); // Generated answer
-console.log(result.citations); // Enriched citations
+console.log(result.rerankedChunks); // Top relevant chunks for context
 console.log(result.error); // Error message (if any)
+
+// Note: Answer generation and citation enrichment happen in the route handler (app/ask/route.ts)
+// The workflow returns rerankedChunks which are used for streaming answer generation
 ```
 
 ### Advanced Usage
@@ -187,17 +189,20 @@ System prompts for LLM operations.
 
 ### workflow.ts
 
-LangGraph-based orchestration of the entire RAG flow with conditional routing.
+LangGraph-based orchestration of the RAG retrieval pipeline with conditional routing.
 
-**Pipeline Nodes**:
+**LangGraph Workflow Nodes**:
 
 1. `detectTemporal` - Temporal window detection
 2. `generateEmbedding` - Query embedding
 3. `hybridSearch` - Candidate retrieval
 4. `skipRerank` - Skip re-ranking for few candidates (< 10)
 5. `rerank` - LLM re-ranking for many candidates (≥ 10)
-6. `generateAnswer` - Answer generation
-7. `enrichCitations` - Citation enrichment
+
+**The following steps happen in the route handler (`app/ask/route.ts`) after the workflow completes, enabling streaming to the UI:**
+
+6. Generate answer
+7. Enrich citations
 
 **Execution**:
 
@@ -212,7 +217,7 @@ const result = await executeRAGWorkflow(query);
 
 - If 0 candidates → END early (already sets "No recent news")
 - If < 10 candidates → Skip to `skipRerank` (use top candidates directly)
-- If ≥ 10 candidates → Proceed to `rerank` (full LLM re-ranking)
+- If ≥ 10 candidates → Proceed to `rerank` (full LLM re-ranking; Note: this is temporarily disabled)
 
 **Error Handling**: Each node catches errors and sets `error` in state. Routing function checks for errors and ends workflow early if detected.
 
@@ -257,21 +262,7 @@ const model = 'gpt-4o-mini'; // LLM model
 const DEFAULT_WINDOW_DAYS = 21; // Default recency
 ```
 
-## Performance
-
-### Typical Latency
-
-| Operation           | Time      |
-| ------------------- | --------- |
-| Temporal Detection  | <10ms     |
-| Generate Embedding  | 50-150ms  |
-| Hybrid Search       | 100-300ms |
-| Re-ranking (40→8)   | 2-5s      |
-| Answer Generation   | 3-8s      |
-| Citation Enrichment | 50-100ms  |
-| **Total**           | **6-14s** |
-
-### Optimization Tips
+## Performance Optimization Next Steps
 
 1. **Reduce Re-ranking Time**:
    - Use local cross-encoder instead of LLM

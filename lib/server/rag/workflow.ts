@@ -1,24 +1,18 @@
 /**
  * LangGraph-based RAG pipeline workflow
- * Orchestrates: temporal detection → embedding → hybrid search → rerank → answer → citations
+ * Orchestrates: temporal detection → embedding → hybrid search → rerank
  * Uses conditional routing to optimize execution flow
+ * Answer generation and citation enrichment happen in the route handler
  */
 import type { CompiledStateGraph } from '@langchain/langgraph';
 import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
-import OpenAI from 'openai';
 import { generateEmbedding } from '../embeddings';
-import { parseCitations } from './citations';
 import { hybridSearch } from './hybrid-search';
-import { getAnswerPrompt } from './prompts';
 import { rerankChunks } from './reranker';
 import { detectTemporalWindow } from './temporal-detection';
 import type { RAGState } from './types';
 
 // Constants
-const LLM_MODEL = 'gpt-5-chat-latest' as const;
-// const LLM_MODEL = 'gpt-4o-mini' as const;
-const LLM_TEMPERATURE = 0.3;
-const LLM_MAX_TOKENS = 1000;
 const RERANK_THRESHOLD = 50; // Disable re-ranking for now
 // const RERANK_THRESHOLD = 10;
 const MAX_CHUNKS = 8;
@@ -27,22 +21,6 @@ const DEFAULT_TEMPORAL_WINDOW_DAYS = 21;
 
 // Type for valid route destinations
 type RouteDestination = typeof END | 'skipRerank' | 'rerank';
-
-// OpenAI client singleton
-let openaiClient: OpenAI | null = null;
-
-function getOpenAIClient(): OpenAI {
-  if (!openaiClient) {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('Missing OPENAI_API_KEY environment variable');
-    }
-    openaiClient = new OpenAI({
-      apiKey,
-    });
-  }
-  return openaiClient;
-}
 
 /**
  * Node: Detect temporal keywords in query
@@ -114,8 +92,6 @@ async function hybridSearchNode(state: RAGState): Promise<Partial<RAGState>> {
       console.log('No candidates found');
       return {
         candidates: [],
-        answer: 'No recent news',
-        citations: [],
       };
     }
 
@@ -153,70 +129,6 @@ async function rerankNode(state: RAGState): Promise<Partial<RAGState>> {
     // Fall back to top candidates without re-ranking
     return {
       rerankedChunks: state.candidates.slice(0, MAX_CHUNKS),
-    };
-  }
-}
-
-/**
- * Node: Generate answer with LLM (streaming)
- */
-async function generateAnswerNode(state: RAGState): Promise<Partial<RAGState>> {
-  if (state.rerankedChunks.length === 0) {
-    return {
-      answer: 'No recent news',
-      citations: [],
-    };
-  }
-
-  try {
-    console.log('Generating answer...');
-    const openai = getOpenAIClient();
-    const prompt = getAnswerPrompt(state.query, state.rerankedChunks);
-
-    // Non-streaming completion for the workflow
-    // (Streaming will be handled in the route handler)
-    const response = await openai.chat.completions.create({
-      model: LLM_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: LLM_TEMPERATURE,
-      max_tokens: LLM_MAX_TOKENS,
-    });
-
-    const answer = response.choices[0]?.message?.content || 'No recent news';
-    console.log('Answer generated');
-
-    return {
-      answer,
-    };
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to generate answer';
-    console.error('Error in generateAnswerNode:', error);
-    return {
-      error: errorMessage,
-    };
-  }
-}
-
-/**
- * Node: Enrich citations from answer
- */
-async function enrichCitationsNode(state: RAGState): Promise<Partial<RAGState>> {
-  if (!state.answer || state.answer === 'No recent news') {
-    return { citations: [] };
-  }
-
-  try {
-    console.log('Parsing and enriching citations...');
-    const { citations } = await parseCitations(state.answer);
-    console.log(`Found ${citations.length} citations`);
-
-    return {
-      citations,
-    };
-  } catch (error: unknown) {
-    console.error('Error in enrichCitationsNode:', error);
-    return {
-      citations: [],
     };
   }
 }
@@ -268,8 +180,6 @@ const GraphAnnotation = Annotation.Root({
   queryEmbedding: Annotation<number[] | null>,
   candidates: Annotation<RAGState['candidates']>,
   rerankedChunks: Annotation<RAGState['rerankedChunks']>,
-  answer: Annotation<string>,
-  citations: Annotation<RAGState['citations']>,
   error: Annotation<string | null>,
 });
 
@@ -280,14 +190,7 @@ const GraphAnnotation = Annotation.Root({
 function buildRAGGraph(): CompiledStateGraph<
   typeof GraphAnnotation.State,
   unknown,
-  | '__start__'
-  | 'detectTemporal'
-  | 'generateEmbedding'
-  | 'hybridSearch'
-  | 'skipRerank'
-  | 'rerank'
-  | 'generateAnswer'
-  | 'enrichCitations'
+  '__start__' | 'detectTemporal' | 'generateEmbedding' | 'hybridSearch' | 'skipRerank' | 'rerank'
 > {
   const workflow = new StateGraph(GraphAnnotation)
     // Add all nodes
@@ -296,8 +199,6 @@ function buildRAGGraph(): CompiledStateGraph<
     .addNode('hybridSearch', hybridSearchNode)
     .addNode('skipRerank', skipRerankNode)
     .addNode('rerank', rerankNode)
-    .addNode('generateAnswer', generateAnswerNode)
-    .addNode('enrichCitations', enrichCitationsNode)
     // Define the flow
     .addEdge(START, 'detectTemporal')
     .addEdge('detectTemporal', 'generateEmbedding')
@@ -308,11 +209,9 @@ function buildRAGGraph(): CompiledStateGraph<
       skipRerank: 'skipRerank',
       rerank: 'rerank',
     })
-    // Both paths converge at generateAnswer
-    .addEdge('skipRerank', 'generateAnswer')
-    .addEdge('rerank', 'generateAnswer')
-    .addEdge('generateAnswer', 'enrichCitations')
-    .addEdge('enrichCitations', END);
+    // Both paths end after reranking (returns rerankedChunks to route handler)
+    .addEdge('skipRerank', END)
+    .addEdge('rerank', END);
 
   return workflow.compile();
 }
@@ -322,7 +221,7 @@ function buildRAGGraph(): CompiledStateGraph<
  * Uses LangGraph StateGraph for orchestration with conditional routing
  *
  * @param query - User's question
- * @returns Final state with answer and citations
+ * @returns Final state with reranked chunks for answer generation
  */
 export async function executeRAGWorkflow(query: string): Promise<RAGState> {
   const initialState = {
@@ -331,8 +230,6 @@ export async function executeRAGWorkflow(query: string): Promise<RAGState> {
     queryEmbedding: null as number[] | null,
     candidates: [] as RAGState['candidates'],
     rerankedChunks: [] as RAGState['rerankedChunks'],
-    answer: '',
-    citations: [] as RAGState['citations'],
     error: null as string | null,
   };
 
@@ -356,7 +253,6 @@ export async function executeRAGWorkflow(query: string): Promise<RAGState> {
     return {
       ...initialState,
       error: errorMessage,
-      answer: 'An error occurred while processing your request.',
     };
   }
 }

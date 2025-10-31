@@ -29,6 +29,7 @@ export interface Citation {
 
 /**
  * State for LangGraph RAG workflow
+ * Workflow returns rerankedChunks; answer generation happens in route handler
  */
 export interface RAGState {
   query: string;
@@ -36,8 +37,6 @@ export interface RAGState {
   queryEmbedding: number[] | null;
   candidates: Chunk[];
   rerankedChunks: Chunk[];
-  answer: string;
-  citations: Citation[];
   error: string | null;
 }
 

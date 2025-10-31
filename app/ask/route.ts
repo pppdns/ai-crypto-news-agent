@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     }
 
     // Handle "No recent news" case
-    if (ragResult.answer === 'No recent news' || ragResult.rerankedChunks.length === 0) {
+    if (ragResult.rerankedChunks.length === 0) {
       console.log('No relevant results found');
 
       // Stream a simple response

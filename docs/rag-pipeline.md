@@ -12,7 +12,7 @@ The AI Crypto News Agent uses a sophisticated Retrieval-Augmented Generation (RA
 User Query
     ↓
 ┌──────────────────────────────────────────────┐
-│     LangGraph RAG Pipeline Workflow          │
+│   LangGraph RAG Workflow (Retrieval Only)    │
 ├──────────────────────────────────────────────┤
 │ 1. Temporal Detection                        │
 │    └─→ Extract time context (days)           │
@@ -33,8 +33,14 @@ User Query
 │ 5. Re-ranking (Conditional)                  │
 │    ├─→ LLM scores each chunk (1-10)          │
 │    └─→ Return top 8 chunks                   │
-│                                              │
-│ 6. Answer Generation (gpt-4o-mini)           │
+└──────────────────────────────────────────────┘
+    ↓
+  rerankedChunks
+    ↓
+┌──────────────────────────────────────────────┐
+│     Route Handler (app/ask/route.ts)         │
+├──────────────────────────────────────────────┤
+│ 6. Answer Generation (streaming)             │
 │    ├─→ Prompt LLM with context               │
 │    ├─→ Stream tokens to UI                   │
 │    └─→ Include citation markers              │
@@ -168,7 +174,7 @@ Respond with ONLY a number between 1 and 10.
 
 **Purpose**: Generate a grounded, cited answer using only retrieved context.
 
-**Location**: `lib/server/rag/workflow.ts` (generateAnswerNode)
+**Location**: `app/ask/route.ts` (route handler, after workflow completes)
 
 **Process**:
 
@@ -195,7 +201,7 @@ Respond with ONLY a number between 1 and 10.
 
 **Purpose**: Extract article IDs from LLM response and enrich with full metadata.
 
-**Location**: `lib/server/rag/citations.ts`
+**Location**: `app/ask/route.ts` (uses `lib/server/rag/citations.ts` for parsing)
 
 **Process**:
 
@@ -292,15 +298,15 @@ WHERE articles.id IN (extracted_article_ids)
 
 **State Management**: LangGraph Annotation API with type-safe `RAGState` interface
 
-**Nodes**:
+**LangGraph Workflow Nodes** (Retrieval Only):
 
 - `detectTemporal`: Temporal window detection
 - `generateEmbedding`: Query embedding generation
 - `hybridSearch`: Hybrid retrieval
-- `skipRerank`: Pass-through node when < 10 candidates
-- `rerank`: LLM re-ranking (conditionally executed)
-- `generateAnswer`: Answer generation
-- `enrichCitations`: Citation enrichment
+- `skipRerank`: Pass-through node when < 50 candidates
+- `rerank`: LLM re-ranking (conditionally executed when ≥ 50 candidates)
+
+**Note**: Answer generation and citation enrichment happen in `app/ask/route.ts` after the workflow completes, enabling streaming to the UI.
 
 **Execution**: StateGraph with conditional routing based on candidate count
 
@@ -308,9 +314,9 @@ WHERE articles.id IN (extracted_article_ids)
 
 - After `hybridSearch`, routes to:
   - `END` if error or no candidates
-  - `skipRerank` if < 10 candidates (cost optimization)
-  - `rerank` if ≥ 10 candidates (full LLM scoring)
-- Both `skipRerank` and `rerank` converge at `generateAnswer`
+  - `skipRerank` if < 50 candidates (cost optimization)
+  - `rerank` if ≥ 50 candidates (full LLM scoring)
+- Both `skipRerank` and `rerank` end at `END`, returning `rerankedChunks` to the route handler
 
 **Benefits**:
 
@@ -319,6 +325,7 @@ WHERE articles.id IN (extracted_article_ids)
 - Declarative workflow definition
 - Built-in error handling and state transitions
 - Explicit control flow with visual graph structure
+- Clean separation: workflow = retrieval, route handler = generation + streaming
 
 ### Vector Database
 
@@ -339,18 +346,6 @@ WHERE articles.id IN (extracted_article_ids)
 - Client-side `useChat()` hook
 
 ## Performance Characteristics
-
-### Latency Breakdown (Typical Query)
-
-| Stage               | Time      | Notes                       |
-| ------------------- | --------- | --------------------------- |
-| Temporal Detection  | <10ms     | Regex pattern matching      |
-| Query Embedding     | 50-150ms  | OpenAI API call             |
-| Hybrid Search       | 100-300ms | Postgres vector + FTS query |
-| Re-ranking (40→8)   | 2-5s      | 40 parallel LLM calls       |
-| Answer Generation   | 3-8s      | Streaming LLM response      |
-| Citation Enrichment | 50-100ms  | Database metadata fetch     |
-| **Total**           | **6-14s** | Most time in LLM operations |
 
 ### Optimization Opportunities
 
