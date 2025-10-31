@@ -1,8 +1,8 @@
 ## Video Overview (3 min)
 
-[https://www.loom.com/share/fca360b8c6084f48b33fea4e8ba5a3c1](https://www.loom.com/share/fca360b8c6084f48b33fea4e8ba5a3c1)
+[https://www.loom.com/share/34816662e7de41d5a4e6794c22354c80](https://www.loom.com/share/34816662e7de41d5a4e6794c22354c80)
 
-[![Video Overview (3 min)](public/video.png)](https://www.loom.com/share/fca360b8c6084f48b33fea4e8ba5a3c1)
+[![Video Overview (3 min)](public/video.png)](https://www.loom.com/share/34816662e7de41d5a4e6794c22354c80)
 
 # AI Crypto News Agent
 
@@ -58,7 +58,7 @@ The core of the system — a LangGraph-orchestrated pipeline optimized for accur
 User Query
     ↓
 ┌──────────────────────────────────────────────┐
-│     LangGraph RAG Pipeline Workflow          │
+│   LangGraph RAG Workflow (Retrieval Only)    │
 ├──────────────────────────────────────────────┤
 │ 1. Temporal Detection                        │
 │    └─→ Extract time context (days)           │
@@ -79,8 +79,14 @@ User Query
 │ 5. Re-ranking (Conditional)                  │
 │    ├─→ LLM scores each chunk (1-10)          │
 │    └─→ Return top 8 chunks                   │
-│                                              │
-│ 6. Answer Generation (gpt-4o-mini)           │
+└──────────────────────────────────────────────┘
+    ↓
+  rerankedChunks
+    ↓
+┌──────────────────────────────────────────────┐
+│     Route Handler (app/ask/route.ts)         │
+├──────────────────────────────────────────────┤
+│ 6. Answer Generation (streaming)             │
 │    ├─→ Prompt LLM with context               │
 │    ├─→ Stream tokens to UI                   │
 │    └─→ Include citation markers              │
@@ -91,7 +97,7 @@ User Query
 │    └─→ Return enriched citations             │
 └──────────────────────────────────────────────┘
     ↓
-Streaming Response (Vercel AI SDK) + Citations
+Streaming Response + Citations
 ```
 
 **Key Choices:**
