@@ -1,3 +1,9 @@
+## Video Overview (3 min)
+
+[https://www.loom.com/share/fca360b8c6084f48b33fea4e8ba5a3c1](https://www.loom.com/share/fca360b8c6084f48b33fea4e8ba5a3c1)
+
+[![Video Overview (3 min)](public/video.png)](https://www.loom.com/share/fca360b8c6084f48b33fea4e8ba5a3c1)
+
 # AI Crypto News Agent
 
 **A Next.js application that answers crypto questions using fresh, grounded news with strict citations.**
