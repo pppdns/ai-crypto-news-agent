@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-// import { Analytics } from '@vercel/analytics/next';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { HeroUIProvider } from './hero-ui-provider';
 
@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
         <HeroUIProvider>{children}</HeroUIProvider>
-        {/* <Analytics /> */}
+        <Analytics />
       </body>
     </html>
   );
