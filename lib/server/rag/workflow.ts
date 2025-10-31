@@ -15,7 +15,8 @@ import { detectTemporalWindow } from './temporal-detection';
 import type { RAGState } from './types';
 
 // Constants
-const LLM_MODEL = 'gpt-4o-mini' as const;
+const LLM_MODEL = 'gpt-5-chat-latest' as const;
+// const LLM_MODEL = 'gpt-4o-mini' as const;
 const LLM_TEMPERATURE = 0.3;
 const LLM_MAX_TOKENS = 1000;
 const RERANK_THRESHOLD = 50; // Disable re-ranking for now

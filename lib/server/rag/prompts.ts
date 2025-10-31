@@ -28,7 +28,7 @@ ${chunk.content}`,
 
 STRICT RULES:
 1. Only use information from the context provided
-2. Cite every claim using the format: [Article ID: <uuid>] immediately after the relevant sentence
+2. Cite every claim using exactly this format: [Article ID: <uuid>] immediately after the relevant sentence. Make sure the article ID is using the UUID format.
 3. Use the exact Article ID from the context (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 4. If the context doesn't contain enough information to answer the question, respond EXACTLY with: "No recent news"
 5. Do not fabricate or hallucinate any information
