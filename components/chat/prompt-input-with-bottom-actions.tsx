@@ -17,8 +17,8 @@ export default function Component({ input, setInput, sendMessage, isLoading }: P
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
   const ideas = [
-    'Latest Bitcoin news?',
-    'How did XRP perform this week?',
+    'Latest XRP news?',
+    'How did Bitcoin perform this week?',
     'What is the latest news on the SEC vs Binance lawsuit?',
     "How did Trump's China tariff announcements affect Bitcoin prices?",
   ];
