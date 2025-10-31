@@ -5,7 +5,13 @@ import { isTestEnv } from './lib/server/is-test-env';
 Sentry.init({
   enabled: !isDevEnv() && !isTestEnv(),
   dsn: 'https://77631f1438980c9bf57df376f37072fb@o4510280463613952.ingest.us.sentry.io/4510280509882368',
-  integrations: [Sentry.replayIntegration()],
+  integrations: [
+    Sentry.replayIntegration({
+      maskAllText: false,
+      blockAllMedia: false,
+      maskAllInputs: false,
+    }),
+  ],
   tracesSampleRate: 1,
   enableLogs: true,
   replaysSessionSampleRate: 1,
