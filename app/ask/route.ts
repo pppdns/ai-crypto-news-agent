@@ -21,6 +21,11 @@ interface CitationsMessage {
   citations: Citation[];
 }
 
+interface ErrorMessage {
+  type: 'error';
+  message: string;
+}
+
 export async function POST(req: Request) {
   try {
     const { query }: RequestBody = await req.json();
@@ -67,45 +72,51 @@ export async function POST(req: Request) {
     // Generate prompt with context
     const prompt = getAnswerPrompt(query, ragResult.rerankedChunks);
 
-    // Stream using Vercel AI SDK
+    // gpt-5-chat-latest was removed from the API on 2026-07-23.
+    // Terra is enough here: the model only has to summarize retrieved chunks and cite them.
     const result = streamText({
-      model: openai('gpt-5-chat-latest'),
-      // model: openai('gpt-4o-mini'),
+      model: openai('gpt-5.6-terra'),
       prompt,
-      temperature: 0.3,
     });
 
-    // Create a custom stream that includes citations at the end
-    const stream = result.textStream;
-    let fullText = '';
+    const outputStream = new ReadableStream<string>({
+      async start(controller) {
+        let fullText = '';
 
-    const transformStream = new TransformStream<string, string>({
-      async transform(chunk: string, controller: TransformStreamDefaultController<string>) {
-        fullText += chunk;
-        controller.enqueue(chunk);
-      },
-      async flush(controller: TransformStreamDefaultController<string>) {
-        // Parse citations after streaming completes
-        const { text: cleanedText, citations } = await parseCitations(fullText);
-        console.log(`Parsed ${citations.length} citations from response`);
+        try {
+          for await (const chunk of result.textStream) {
+            fullText += chunk;
+            controller.enqueue(chunk);
+          }
 
-        // Send cleaned text replacement message
-        const cleanedTextMessage: CleanedTextMessage = {
-          type: 'cleanedText',
-          text: cleanedText,
-        };
-        controller.enqueue(`\ndata: ${JSON.stringify(cleanedTextMessage)}\n\n`);
+          const { text: cleanedText, citations } = await parseCitations(fullText);
+          console.log(`Parsed ${citations.length} citations from response`);
 
-        // Send citations as a data message
-        const citationsMessage: CitationsMessage = {
-          type: 'citations',
-          citations,
-        };
-        controller.enqueue(`\ndata: ${JSON.stringify(citationsMessage)}\n\n`);
+          const cleanedTextMessage: CleanedTextMessage = {
+            type: 'cleanedText',
+            text: cleanedText,
+          };
+          controller.enqueue(`\ndata: ${JSON.stringify(cleanedTextMessage)}\n\n`);
+
+          const citationsMessage: CitationsMessage = {
+            type: 'citations',
+            citations,
+          };
+          controller.enqueue(`\ndata: ${JSON.stringify(citationsMessage)}\n\n`);
+        } catch (error) {
+          console.error('Answer stream error:', error);
+          const errorMessage: ErrorMessage = {
+            type: 'error',
+            message: error instanceof Error ? error.message : String(error),
+          };
+          controller.enqueue(`\ndata: ${JSON.stringify(errorMessage)}\n\n`);
+        } finally {
+          controller.close();
+        }
       },
     });
 
-    return new Response(stream.pipeThrough(transformStream), {
+    return new Response(outputStream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
