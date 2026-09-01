@@ -24,7 +24,7 @@ function EmptyState() {
     <div>
       <p className="text-accent font-mono text-[11px] tracking-[0.22em]">CRYPTO NEWS AGENT</p>
       <h1 className="text-ink mt-3 max-w-xl text-[1.85rem] leading-[1.08] font-medium tracking-tight sm:text-[2.75rem] xl:text-[3.15rem]">
-        Ask about the news.
+        Ask about crypto news.
       </h1>
       <p className="text-muted mt-3 max-w-md text-[14px] leading-relaxed sm:text-[15px]">
         Grounded answers from indexed crypto news. Every claim cited. Nothing invented.
