@@ -1,53 +1,42 @@
 'use client';
 
 import React from 'react';
-import { Avatar, Badge } from '@heroui/react';
 import { cn } from '@heroui/react';
-import { CircleAlert } from 'lucide-react';
 
 export type MessageCardProps = React.HTMLAttributes<HTMLDivElement> & {
-  avatar?: string;
+  role: 'user' | 'assistant';
   message?: React.ReactNode;
   status?: 'success' | 'failed';
-  messageClassName?: string;
 };
 
 const MessageCard = React.forwardRef<HTMLDivElement, MessageCardProps>(
-  ({ avatar, message, status, className, messageClassName, ...props }, ref) => {
-    const messageRef = React.useRef<HTMLDivElement>(null);
-
-    const failedMessageClassName =
-      status === 'failed' ? 'bg-danger-100/50 border border-danger-100 text-foreground' : '';
-    const failedMessage = <p>Something went wrong</p>;
-
+  ({ role, message, status, className, ...props }, ref) => {
     const hasFailed = status === 'failed';
+    const label = role === 'user' ? 'YOU' : 'AGENT';
 
     return (
-      <div {...props} ref={ref} className={cn('flex gap-3', className)}>
-        <div className="relative flex-none">
-          <Badge
-            isOneChar
-            color="danger"
-            content={<CircleAlert className="text-background" />}
-            isInvisible={!hasFailed}
-            placement="bottom-right"
-            shape="circle"
-          >
-            <Avatar src={avatar} />
-          </Badge>
-        </div>
-        <div className="flex flex-col gap-4">
-          <div
+      <div {...props} ref={ref} className={cn('flex gap-3 sm:gap-4', className)}>
+        <div className="flex w-10 shrink-0 flex-col items-start sm:w-14">
+          <span
             className={cn(
-              'rounded-large bg-content2 text-default-600 relative w-full px-3 md:p-6',
-              failedMessageClassName,
-              messageClassName,
+              'font-mono text-[10px] tracking-[0.18em]',
+              role === 'assistant' ? 'text-accent' : 'text-muted',
             )}
           >
-            <div ref={messageRef} className={'text-small p-2'}>
-              {hasFailed ? failedMessage : message}
-            </div>
-          </div>
+            {label}
+          </span>
+          <span
+            className={cn('mt-2 w-px flex-1', role === 'assistant' ? 'bg-accent/55' : 'bg-hairline-strong')}
+            aria-hidden
+          />
+        </div>
+        <div
+          className={cn(
+            'text-ink min-w-0 flex-1 pt-px text-[15px] leading-relaxed',
+            hasFailed && 'border-danger/30 bg-danger/10 text-danger rounded-md border px-3 py-2',
+          )}
+        >
+          {hasFailed ? <p>Something went wrong</p> : message}
         </div>
       </div>
     );

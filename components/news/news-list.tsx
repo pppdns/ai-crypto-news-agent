@@ -1,8 +1,3 @@
-'use client';
-
-import Link from 'next/link';
-import { Button, Card, CardBody, CardHeader } from '@heroui/react';
-import { MessageSquare } from 'lucide-react';
 import { ArticleCard } from './article-card';
 
 interface ArticleWithSource {
@@ -20,40 +15,23 @@ interface NewsListProps {
 
 export function NewsList({ articles }: NewsListProps) {
   return (
-    <div className="mx-auto max-w-7xl">
-      <Card className="mb-6 p-6">
-        <CardHeader className="flex-row items-start justify-between pb-4">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold">Latest Crypto News</h1>
-            <p className="text-sm text-slate-600">
-              {articles.length > 0
-                ? `Showing ${articles.length} recent article${articles.length !== 1 ? 's' : ''}`
-                : 'No articles available'}
-            </p>
-          </div>
-          <Button
-            as={Link}
-            href="/"
-            variant="flat"
-            color="primary"
-            startContent={<MessageSquare className="h-4 w-4 shrink-0" />}
-            className="shrink-0"
-          >
-            Chat
-          </Button>
-        </CardHeader>
-      </Card>
+    <div className="mx-auto w-full max-w-[780px] px-4 py-8 sm:px-6 sm:py-10">
+      <header className="mb-8">
+        <p className="text-accent font-mono text-[11px] tracking-[0.22em]">INDEX</p>
+        <h1 className="text-ink mt-2 text-[1.75rem] leading-tight font-medium tracking-tight sm:text-[2rem]">
+          Latest from the wire
+        </h1>
+        <p className="text-faint mt-2 font-mono text-[11px] tracking-[0.12em]">
+          {articles.length > 0 ? `${articles.length.toLocaleString('en-US')} ARTICLES` : 'NO ARTICLES AVAILABLE'}
+        </p>
+      </header>
 
       {articles.length === 0 ? (
-        <Card className="p-12 text-center">
-          <CardBody>
-            <p className="text-lg text-slate-600">
-              No articles found. Run the ingestion process to fetch news articles.
-            </p>
-          </CardBody>
-        </Card>
+        <p className="border-hairline text-muted border-t py-12 text-[15px]">
+          No articles found. Run the ingestion process to fetch news articles.
+        </p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="divide-hairline border-hairline divide-y border-y">
           {articles.map((article) => (
             <ArticleCard
               key={article.id}

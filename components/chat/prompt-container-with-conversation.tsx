@@ -1,12 +1,11 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { ScrollShadow } from '@heroui/react';
+import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@heroui/react';
-import { TriangleAlert } from 'lucide-react';
 import { Citation } from './citations';
 import Conversation from './conversation';
-import PromptInputWithBottomActions from './prompt-input-with-bottom-actions';
+import PromptInputWithBottomActions, { SuggestedPrompts } from './prompt-input-with-bottom-actions';
 
 interface ErrorResponse {
   error?: string;
@@ -20,24 +19,39 @@ interface StreamDataMessage {
   message?: string;
 }
 
-export default function Component({
-  className,
-  scrollShadowClassname,
-}: {
-  className?: string;
-  scrollShadowClassname?: string;
-}) {
+function EmptyState() {
+  return (
+    <div>
+      <p className="text-accent font-mono text-[11px] tracking-[0.22em]">CRYPTO NEWS AGENT</p>
+      <h1 className="text-ink mt-3 max-w-xl text-[1.85rem] leading-[1.08] font-medium tracking-tight sm:text-[2.75rem]">
+        Ask the tape.
+      </h1>
+      <p className="text-muted mt-3 max-w-md text-[14px] leading-relaxed sm:text-[15px]">
+        Grounded answers from indexed crypto news. Every claim cited. Nothing invented.
+      </p>
+    </div>
+  );
+}
+
+export default function PromptContainerWithConversation({ className }: { className?: string }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [citations, setCitations] = useState<Citation[]>([]);
   const [userQuestion, setUserQuestion] = useState('');
   const [assistantAnswer, setAssistantAnswer] = useState('');
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const isEmpty = !userQuestion && !assistantAnswer;
+
+  useEffect(() => {
+    if (isEmpty) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    bottomRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'end' });
+  }, [assistantAnswer, isLoading, isEmpty]);
 
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isLoading) return;
 
-      // Clear previous state and set new question
       setUserQuestion(text);
       setAssistantAnswer('');
       setCitations([]);
@@ -54,14 +68,12 @@ export default function Component({
         });
 
         if (!response.ok) {
-          // Try to get error message from response
           const errorText = await response.text();
           let errorMessage = 'Request failed';
           try {
             const errorJson: ErrorResponse = JSON.parse(errorText);
             errorMessage = errorJson.message || errorJson.error || errorMessage;
           } catch {
-            // Not JSON, use status text
             errorMessage = `Request failed: ${response.status} ${response.statusText}`;
           }
           throw new Error(errorMessage);
@@ -89,16 +101,13 @@ export default function Component({
                   } else if (parsed.type === 'citations' && parsed.citations) {
                     setCitations(parsed.citations);
                   } else if (parsed.type === 'cleanedText' && parsed.text) {
-                    // Replace accumulated text with cleaned version
                     setAssistantAnswer(parsed.text);
                   }
                 } catch {
-                  // Not JSON, treat as text
                   accumulatedText += data;
                   setAssistantAnswer(accumulatedText);
                 }
               } else if (line.trim()) {
-                // Plain text chunk
                 accumulatedText += line;
                 setAssistantAnswer(accumulatedText);
               }
@@ -117,29 +126,47 @@ export default function Component({
   );
 
   return (
-    <div className={cn('flex w-full max-w-full flex-col gap-24', className)}>
-      <ScrollShadow className={cn('flex h-full flex-col', scrollShadowClassname)}>
-        <Conversation
-          userQuestion={userQuestion}
-          assistantAnswer={assistantAnswer}
-          isLoading={isLoading}
-          citations={citations}
-        />
-      </ScrollShadow>
-      <div className="flex flex-col gap-2">
-        <PromptInputWithBottomActions
-          input={input}
-          setInput={setInput}
-          sendMessage={sendMessage}
-          isLoading={isLoading}
-        />
-        <p className="text-tiny mt-2 flex flex-wrap items-center gap-1 px-2 font-semibold text-amber-500">
-          <TriangleAlert className="mr-1 inline-block h-4 w-4" />
-          Only news articles since <span className="underline">Oct 29, 2025</span> are included in the database.
-          <a href="/news" className="underline">
-            View all articles
-          </a>
-        </p>
+    <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex min-h-full w-full max-w-[780px] flex-col px-4 sm:px-6">
+          {isEmpty ? (
+            <div className="flex flex-1 flex-col justify-center gap-7 py-8 sm:gap-8 sm:py-10">
+              <EmptyState />
+              <SuggestedPrompts onSelect={sendMessage} isLoading={isLoading} />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-8 py-6 sm:py-10">
+              <Conversation
+                userQuestion={userQuestion}
+                assistantAnswer={assistantAnswer}
+                isLoading={isLoading}
+                citations={citations}
+              />
+              <div ref={bottomRef} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="border-hairline bg-canvas/90 border-t pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-[780px] flex-col gap-2 px-4 pt-3 sm:px-6">
+          <PromptInputWithBottomActions
+            input={input}
+            setInput={setInput}
+            sendMessage={sendMessage}
+            isLoading={isLoading}
+          />
+          <p className="text-faint flex flex-wrap items-center gap-x-1.5 px-1 pb-1 font-mono text-[10px] tracking-[0.08em]">
+            <span>INDEXED FROM 29 OCT 2025</span>
+            <span aria-hidden>·</span>
+            <Link
+              href="/news"
+              className="text-muted decoration-hairline-strong hover:text-ink underline underline-offset-2"
+            >
+              View feed
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
