@@ -269,7 +269,7 @@ npm run supabase:gen-types:dev
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to use the chat interface.
+Visit [http://localhost:3021](http://localhost:3021) to use the chat interface.
 
 ### Ingesting News Articles
 
