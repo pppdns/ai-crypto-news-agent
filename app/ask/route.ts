@@ -72,9 +72,10 @@ export async function POST(req: Request) {
     // Generate prompt with context
     const prompt = getAnswerPrompt(query, ragResult.rerankedChunks);
 
-    // gpt-5-chat-latest was removed from the API on 2026-07-23; gpt-5.6-sol is the official replacement.
+    // gpt-5-chat-latest was removed from the API on 2026-07-23.
+    // Terra is enough here: the model only has to summarize retrieved chunks and cite them.
     const result = streamText({
-      model: openai('gpt-5.6-sol'),
+      model: openai('gpt-5.6-terra'),
       prompt,
     });
 
