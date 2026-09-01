@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3021",
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "eslint",
@@ -15,7 +15,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "typecheck": "npx --yes tsc --noEmit --skipLibCheck --project tsconfig.json",
-    "ngrok": "ngrok http 3000",
+    "ngrok": "ngrok http 3021",
     "trigger:dev": "NODE_OPTIONS='--no-deprecation' npx trigger.dev@latest dev",
     "trigger:deploy": "npx trigger.dev@latest deploy",
     "supabase:gen-types:dev": "npx supabase gen types typescript --local --schema public > supabase/database.types.ts && npx prettier --write supabase/database.types.ts && git add supabase/database.types.ts",
