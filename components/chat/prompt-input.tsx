@@ -15,7 +15,7 @@ const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProps>(
         aria-label="Prompt"
         rows={1}
         className={cn(
-          'text-ink placeholder:text-faint min-h-11 w-full resize-none bg-transparent py-2.5 text-base leading-relaxed focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+          'text-ink placeholder:text-muted min-h-11 w-full resize-none bg-transparent py-2.5 text-base leading-relaxed focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
           className,
         )}
         placeholder="Ask about the latest crypto news"

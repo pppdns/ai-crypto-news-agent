@@ -52,7 +52,7 @@ export default function PromptInputWithBottomActions({
 
   return (
     <form
-      className="border-hairline-strong bg-surface focus-within:border-accent/40 flex items-end gap-2 rounded-md border px-3 py-1.5 transition-colors"
+      className="border-hairline-strong bg-raised focus-within:border-accent flex min-h-14 items-end gap-2 rounded-lg border px-3 py-2 shadow-[0_0_0_1px_rgba(59,232,176,0.22)] transition-colors focus-within:shadow-[0_0_0_1px_rgba(59,232,176,0.55)] sm:min-h-16 sm:px-4"
       onSubmit={handleSubmit}
     >
       <PromptInput
@@ -68,8 +68,8 @@ export default function PromptInputWithBottomActions({
         disabled={!canSend}
         aria-label="Send message"
         className={cn(
-          'mb-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-sm transition-colors',
-          canSend ? 'bg-accent text-canvas hover:bg-accent/90' : 'bg-raised text-faint',
+          'mb-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors',
+          canSend ? 'bg-accent text-canvas hover:bg-accent/90' : 'bg-accent/20 text-accent',
         )}
       >
         <ArrowUp className="h-4 w-4" strokeWidth={2.25} />
@@ -80,14 +80,14 @@ export default function PromptInputWithBottomActions({
 
 export function SuggestedPrompts({ onSelect, isLoading }: { onSelect: (prompt: string) => void; isLoading: boolean }) {
   return (
-    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {SUGGESTED_PROMPTS.map((idea, index) => (
         <button
           key={idea}
           type="button"
           disabled={isLoading}
           onClick={() => onSelect(idea)}
-          className="group border-hairline hover:border-hairline-strong hover:bg-surface flex min-h-11 items-start gap-3 rounded-md border bg-transparent px-3 py-2.5 text-left transition-colors disabled:opacity-50"
+          className="group border-hairline-strong hover:border-accent/40 hover:bg-surface flex min-h-11 items-start gap-3 rounded-md border bg-transparent px-3 py-2.5 text-left transition-colors disabled:opacity-50"
         >
           <span className="text-accent pt-0.5 font-mono text-[11px]">[{String(index + 1).padStart(2, '0')}]</span>
           <span className="text-ink group-hover:text-accent text-[13.5px] leading-snug">{idea}</span>

@@ -23,8 +23,8 @@ function EmptyState() {
   return (
     <div>
       <p className="text-accent font-mono text-[11px] tracking-[0.22em]">CRYPTO NEWS AGENT</p>
-      <h1 className="text-ink mt-3 max-w-xl text-[1.85rem] leading-[1.08] font-medium tracking-tight sm:text-[2.75rem]">
-        Ask the tape.
+      <h1 className="text-ink mt-3 max-w-xl text-[1.85rem] leading-[1.08] font-medium tracking-tight sm:text-[2.75rem] xl:text-[3.15rem]">
+        Ask about the news.
       </h1>
       <p className="text-muted mt-3 max-w-md text-[14px] leading-relaxed sm:text-[15px]">
         Grounded answers from indexed crypto news. Every claim cited. Nothing invented.
@@ -128,9 +128,9 @@ export default function PromptContainerWithConversation({ className }: { classNa
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex min-h-full w-full max-w-[780px] flex-col px-4 sm:px-6">
+        <div className="mx-auto flex min-h-full w-full max-w-[52.5rem] flex-col px-4 sm:px-6 lg:px-8">
           {isEmpty ? (
-            <div className="flex flex-1 flex-col justify-center gap-7 py-8 sm:gap-8 sm:py-10">
+            <div className="flex flex-1 flex-col justify-center gap-7 py-8 sm:gap-8 lg:justify-start lg:pt-16 lg:pb-10 xl:pt-20">
               <EmptyState />
               <SuggestedPrompts onSelect={sendMessage} isLoading={isLoading} />
             </div>
@@ -148,8 +148,8 @@ export default function PromptContainerWithConversation({ className }: { classNa
         </div>
       </div>
 
-      <div className="border-hairline bg-canvas/90 border-t pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-[780px] flex-col gap-2 px-4 pt-3 sm:px-6">
+      <div className="border-hairline-strong bg-surface border-t pb-[max(0.85rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex w-full max-w-[52.5rem] flex-col gap-2 px-4 pt-3 sm:px-6 sm:pt-4 lg:px-8">
           <PromptInputWithBottomActions
             input={input}
             setInput={setInput}

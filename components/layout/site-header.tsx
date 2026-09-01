@@ -40,7 +40,7 @@ export function SiteHeader() {
 
   return (
     <header className="border-hairline bg-canvas/88 sticky top-0 z-30 border-b backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[780px] items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
+      <div className="flex h-14 items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:px-10 2xl:px-16">
         <Link href="/" className="inline-flex min-h-11 items-center gap-2.5">
           <span className="bg-accent inline-block h-1.5 w-1.5 rounded-[1px]" aria-hidden />
           <span className="text-ink font-mono text-[13px] font-medium tracking-[0.2em]">SIGNAL</span>

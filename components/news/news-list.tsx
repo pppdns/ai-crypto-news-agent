@@ -15,7 +15,7 @@ interface NewsListProps {
 
 export function NewsList({ articles }: NewsListProps) {
   return (
-    <div className="mx-auto w-full max-w-[780px] px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full max-w-[52.5rem] px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
       <header className="mb-8">
         <p className="text-accent font-mono text-[11px] tracking-[0.22em]">INDEX</p>
         <h1 className="text-ink mt-2 text-[1.75rem] leading-tight font-medium tracking-tight sm:text-[2rem]">
