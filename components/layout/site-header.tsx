@@ -24,16 +24,28 @@ export function SiteHeader() {
   const [articleCount, setArticleCount] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch('/articles/count')
-      .then((res) => res.json())
-      .then((data: { count?: number }) => {
+    const controller = new AbortController();
+
+    fetch('/articles/count', { cache: 'no-store', signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Request failed: ${res.status} ${res.statusText}`);
+        }
+        return (await res.json()) as { count?: number };
+      })
+      .then((data) => {
         if (typeof data.count === 'number') {
           setArticleCount(data.count);
         }
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return;
+        }
         console.error('Failed to fetch article count:', error);
       });
+
+    return () => controller.abort();
   }, []);
 
   const formattedCount = articleCount !== null ? articleCount.toLocaleString('en-US') : '—';

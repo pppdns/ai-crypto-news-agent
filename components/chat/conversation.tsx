@@ -14,12 +14,12 @@ export default function Conversation({ userQuestion, assistantAnswer, isLoading,
   return (
     <div className="flex flex-col gap-8">
       {userQuestion && (
-        <MessageCard role="user" message={<p className="text-ink text-[16px] tracking-tight">{userQuestion}</p>} />
+        <MessageCard speaker="user" message={<p className="text-ink text-[16px] tracking-tight">{userQuestion}</p>} />
       )}
 
       {assistantAnswer && (
         <MessageCard
-          role="assistant"
+          speaker="assistant"
           message={
             <div>
               <div
@@ -34,7 +34,7 @@ export default function Conversation({ userQuestion, assistantAnswer, isLoading,
 
       {isLoading && userQuestion && !assistantAnswer && (
         <MessageCard
-          role="assistant"
+          speaker="assistant"
           message={
             <div className="flex min-h-11 items-center gap-2.5">
               <span className="status-dot" aria-hidden />
