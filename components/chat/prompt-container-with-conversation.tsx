@@ -14,9 +14,10 @@ interface ErrorResponse {
 }
 
 interface StreamDataMessage {
-  type: 'citations' | 'cleanedText';
+  type: 'citations' | 'cleanedText' | 'error';
   citations?: Citation[];
   text?: string;
+  message?: string;
 }
 
 export default function Component({
@@ -83,7 +84,9 @@ export default function Component({
                 const data = line.slice(6);
                 try {
                   const parsed: StreamDataMessage = JSON.parse(data);
-                  if (parsed.type === 'citations' && parsed.citations) {
+                  if (parsed.type === 'error' && parsed.message) {
+                    throw new Error(parsed.message);
+                  } else if (parsed.type === 'citations' && parsed.citations) {
                     setCitations(parsed.citations);
                   } else if (parsed.type === 'cleanedText' && parsed.text) {
                     // Replace accumulated text with cleaned version
