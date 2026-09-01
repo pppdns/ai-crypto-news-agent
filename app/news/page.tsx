@@ -42,7 +42,6 @@ async function getArticles(): Promise<ArticleWithSource[]> {
     return [];
   }
 
-  // Transform the data to flatten the source name
   return (data || []).map((article) => ({
     id: article.id,
     title: article.title,
@@ -57,8 +56,8 @@ export default async function NewsPage() {
   const articles = await getArticles();
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 pb-12 sm:p-8">
+    <main className="flex-1">
       <NewsList articles={articles} />
-    </div>
+    </main>
   );
 }

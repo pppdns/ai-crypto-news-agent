@@ -1,29 +1,30 @@
 'use client';
 
 import React from 'react';
-import type { TextAreaProps } from '@heroui/react';
-import { Textarea } from '@heroui/react';
 import { cn } from '@heroui/react';
 
-const PromptInput = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(({ classNames = {}, ...props }, ref) => {
-  return (
-    <Textarea
-      ref={ref}
-      aria-label="Prompt"
-      className="min-h-[40px]"
-      classNames={{
-        ...classNames,
-        label: cn('hidden', classNames?.label),
-        input: cn('py-0', classNames?.input),
-      }}
-      minRows={1}
-      placeholder="Enter a prompt here"
-      radius="lg"
-      variant="bordered"
-      {...props}
-    />
-  );
-});
+type PromptInputProps = Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> & {
+  onValueChange?: (value: string) => void;
+};
+
+const PromptInput = React.forwardRef<HTMLTextAreaElement, PromptInputProps>(
+  ({ className, onValueChange, ...props }, ref) => {
+    return (
+      <textarea
+        ref={ref}
+        aria-label="Prompt"
+        rows={1}
+        className={cn(
+          'text-ink placeholder:text-muted min-h-11 w-full resize-none bg-transparent py-2.5 text-base leading-relaxed focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+          className,
+        )}
+        placeholder="Ask about the latest crypto news"
+        onChange={(event) => onValueChange?.(event.target.value)}
+        {...props}
+      />
+    );
+  },
+);
 
 export default PromptInput;
 

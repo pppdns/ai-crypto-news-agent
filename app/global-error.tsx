@@ -2,15 +2,21 @@
 
 // import NextError from 'next/error';
 import Error from 'next/error';
-import { Inter } from 'next/font/google';
+import { Geist, Geist_Mono } from 'next/font/google';
 import { useEffect } from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { Analytics } from '@vercel/analytics/next';
 import { Frown } from 'lucide-react';
+import './globals.css';
 
-const inter = Inter({
+const geistSans = Geist({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-geist-sans',
+});
+
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
 });
 
 export default function GlobalError({ error }: { error: Error & { digest?: string; message?: string } }) {
@@ -21,24 +27,20 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
   }, [error]);
 
   return (
-    <html>
-      <body className={`${inter.variable}`}>
-        {/* `NextError` is the default Next.js error page component. Its type
-        definition requires a `statusCode` prop. However, since the App Router
-        does not expose status codes for errors, we simply pass 0 to render a
-        generic error message. */}
+    <html lang="en" className="dark">
+      <body className={`${geistSans.variable} ${geistMono.variable} bg-canvas text-ink antialiased`}>
         <div className="flex h-full min-h-dvh w-full flex-col items-center justify-center p-8">
-          <Frown className="mb-4 h-16 w-16 text-red-600" />
+          <Frown className="text-danger mb-4 h-12 w-12" />
 
-          <h1 className="mb-4 text-2xl font-bold text-red-600">An error occurred</h1>
+          <h1 className="text-ink mb-4 text-2xl font-medium tracking-tight">An error occurred</h1>
 
           {error.message && (
-            <div className="mb-4 max-w-lg overflow-auto rounded bg-gray-100 p-3 text-sm text-red-600">
+            <div className="border-hairline bg-surface text-danger mb-4 max-w-lg overflow-auto rounded-md border p-3 font-mono text-sm">
               {error.message}
             </div>
           )}
 
-          <p className="mb-4">
+          <p className="text-muted mb-4 max-w-md text-center">
             We apologize for the inconvenience. We logged the error details and will investigate the issue.
           </p>
         </div>
