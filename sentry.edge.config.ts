@@ -4,7 +4,7 @@ import { isTestEnv } from '@/lib/server/is-test-env';
 
 Sentry.init({
   enabled: !isDevEnv() && !isTestEnv(),
-  dsn: 'https://c3904c68031101ada28bf3c18d58cb67@o4507141801574400.ingest.de.sentry.io/4512012574916688',
+  dsn: 'https://77631f1438980c9bf57df376f37072fb@o4510280463613952.ingest.us.sentry.io/4510280509882368',
   tracesSampleRate: 1,
   enableLogs: true,
   sendDefaultPii: true,
