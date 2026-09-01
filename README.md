@@ -182,6 +182,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 - **[Scheduled Crawling](docs/scheduled-crawling.md)** - Trigger.dev automation
 - **[Trigger Deployment](docs/trigger-deployment.md)** - Production deployment guide
 - **[Crypto News Sources](docs/crypto-news-sources.md)** - RSS feed details
+- **[Testing](docs/testing.md)** - Testing guide with Vitest
 
 ---
 
@@ -286,6 +287,24 @@ npm run trigger:dev
 ```
 
 See [docs/scheduled-crawling.md](docs/scheduled-crawling.md) and [Trigger.dev documentation](https://trigger.dev/docs) for production deployment.
+
+### Running Tests
+
+```bash
+# Run tests in watch mode
+npm test
+
+# Run tests once (CI mode)
+npm run test:run
+
+# Run tests with UI
+npm run test:ui
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+See [docs/testing.md](docs/testing.md) for detailed testing guide.
 
 ### Stopping Services
 

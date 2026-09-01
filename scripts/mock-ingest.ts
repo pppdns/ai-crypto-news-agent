@@ -10,7 +10,7 @@
  * 5. Stores chunks with embeddings and denormalized metadata
  *
  * Usage:
- *   npx tsx scripts/ingest.ts
+ *   npx tsx scripts/mock-ingest.ts
  *
  * Environment variables required:
  *   - SUPABASE_URL
