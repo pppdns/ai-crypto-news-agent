@@ -1,4 +1,4 @@
-import { logger, schedules } from '@trigger.dev/sdk/v3';
+import { logger, schedules } from '@trigger.dev/sdk';
 import { freeEncoder } from '@/lib/server/chunking';
 import { crawlNews } from '@/lib/server/crawler';
 

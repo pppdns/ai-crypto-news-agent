@@ -230,7 +230,7 @@ Acceptable for a prototype.
 
 - **Next.js 16** with App Router, server-side rendering
 - **TypeScript** with strict type-safety
-- **Node.js** (v22)
+- **Node.js** (v24)
 
 ### UI & Styling
 

@@ -44,7 +44,7 @@ npx tsx scripts/crawl-news.ts
 npx trigger.dev@latest dev
 
 # Manual trigger
-import { tasks } from '@trigger.dev/sdk/v3';
+import { tasks } from '@trigger.dev/sdk';
 await tasks.trigger('crawl-crypto-news', {});
 ```
 

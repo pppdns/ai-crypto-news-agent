@@ -204,7 +204,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 
 ### Prerequisites
 
-- **Node.js 22+** - Install via [NVM](https://github.com/nvm-sh/nvm#installing-and-updating) (recommended)
+- **Node.js 24+** - Install via [NVM](https://github.com/nvm-sh/nvm#installing-and-updating) (recommended)
 - **Docker** - Required for local Supabase ([Install Docker](https://docs.docker.com/get-docker/))
 - **OpenAI API Key** - [Get one here](https://platform.openai.com/api-keys)
 - **Firecrawl API Key** - [Sign up](https://www.firecrawl.dev/) or [self-host](https://github.com/mendableai/firecrawl)
@@ -217,9 +217,9 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 git clone <repo-url>
 cd ai-crypto-news-agent
 
-# Install Node.js 22 (if using NVM)
-nvm install 22
-nvm use 22
+# Install Node.js 24 (if using NVM)
+nvm install 24
+nvm use 24
 
 # Install dependencies
 npm install
