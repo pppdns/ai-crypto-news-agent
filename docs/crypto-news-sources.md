@@ -1,6 +1,6 @@
 # Crypto News Data Sources
 
-The system ingests real-time cryptocurrency news from multiple RSS feed sources every 15 minutes.
+The system ingests real-time cryptocurrency news from multiple RSS feed sources every hour.
 
 ## Real Data Sources
 

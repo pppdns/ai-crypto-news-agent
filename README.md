@@ -41,7 +41,7 @@ Ingests crypto news from **6 major publishers** → Indexes with **hybrid vector
 
 ## System Architecture
 
-### Ingestion Pipeline (Runs every 15 Minutes)
+### Ingestion Pipeline (Runs every Hour)
 
 **RSS Feeds** → **Firecrawl Extraction** → **Normalization & Data Cleaning** → **Chunk & Embed** → **Supabase Postgres**
 
@@ -279,7 +279,7 @@ Visit [http://localhost:3021](http://localhost:3021) to use the chat interface.
 npx tsx scripts/crawl-news.ts
 ```
 
-**Option 2: Scheduled crawling** (every 15 minutes via Trigger.dev)
+**Option 2: Scheduled crawling** (every hour via Trigger.dev)
 
 ```bash
 # Start Trigger.dev dev server

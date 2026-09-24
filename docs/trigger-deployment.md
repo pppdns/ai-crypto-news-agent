@@ -23,7 +23,7 @@ This builds, uploads, and activates your scheduled task automatically.
 
 1. Go to Trigger.dev dashboard
 2. Navigate to **Tasks** → `crawl-crypto-news`
-3. Check **Schedules** tab (should show active every 15 minutes)
+3. Check **Schedules** tab (should show active every hour)
 4. View **Runs** for execution history
 
 ## Test Manually
@@ -44,7 +44,7 @@ npx tsx scripts/crawl-news.ts
 
 ## What It Does
 
-Every 15 minutes, the task:
+Every hour, the task:
 
 1. Fetches RSS feeds from configured sources
 2. Scrapes new articles with Firecrawl
@@ -55,7 +55,7 @@ Every 15 minutes, the task:
 ## Task Configuration
 
 - **File**: `trigger/crawl-crypto-news.ts`
-- **Schedule**: `*/15 * * * *` (every 15 minutes)
+- **Schedule**: `0 * * * *` (every hour, at minute 0)
 - **Timezone**: UTC
 - **Max Duration**: 10 minutes
 
