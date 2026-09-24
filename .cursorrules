@@ -251,7 +251,7 @@ Acceptable for a prototype.
 
 ### Background Jobs
 
-- **Trigger.dev** - Scheduled task runs every 15 minutes to automatically crawl and ingest crypto news
+- **Trigger.dev** - Scheduled task runs every hour to automatically crawl and ingest crypto news
 
 ## Future Enhancements
 

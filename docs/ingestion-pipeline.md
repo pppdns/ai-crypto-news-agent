@@ -5,7 +5,7 @@
 The ingestion pipeline processes crypto news articles from RSS feeds and stores them in Supabase with embeddings. There are two ingestion methods:
 
 1. **Manual News Crawler** (`scripts/crawl-news.ts`) - For on-demand crawling from RSS feeds
-2. **Scheduled Crawler** (`trigger/crawl-crypto-news.ts`) - **Recommended**: Automated crawling every 15 minutes via Trigger.dev
+2. **Scheduled Crawler** (`trigger/crawl-crypto-news.ts`) - **Recommended**: Automated crawling every hour via Trigger.dev
 
 ## Usage
 
@@ -28,11 +28,11 @@ See [Crawler Documentation](./crawler.md) for detailed implementation informatio
 
 ### Scheduled Crawler (Production - Recommended)
 
-The production system uses a Trigger.dev scheduled task that runs every 15 minutes automatically:
+The production system uses a Trigger.dev scheduled task that runs every hour automatically:
 
 - **Task ID**: `crawl-crypto-news`
 - **File**: `trigger/crawl-crypto-news.ts`
-- **Schedule**: Every 15 minutes (cron: `*/15 * * * *`)
+- **Schedule**: Every hour (cron: `0 * * * *`)
 - **Max Duration**: 10 minutes
 - **Retry Policy**: 2 attempts with exponential backoff
 - **Documentation**: See [Scheduled Crawling](./scheduled-crawling.md)
