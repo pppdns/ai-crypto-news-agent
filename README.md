@@ -183,6 +183,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 - **[Trigger Deployment](docs/trigger-deployment.md)** - Production deployment guide
 - **[Crypto News Sources](docs/crypto-news-sources.md)** - RSS feed details
 - **[Testing](docs/testing.md)** - Testing guide with Vitest
+- **[CLAUDE.md](CLAUDE.md)** - Guide for Claude Code (commands, code map, conventions). Shared settings, hooks and slash commands live in `.claude/`
 
 ---
 
