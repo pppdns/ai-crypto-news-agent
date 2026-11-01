@@ -11,7 +11,7 @@ Guidance for Claude Code when working in this repository. The full product spec 
 
 ## Commands
 
-Node 22 (`.nvmrc`). Install with `npm ci`.
+Node 22 (`.nvmrc`). Install with `npm ci`. In Claude Code cloud sessions the SessionStart hook (`.claude/hooks/session-start.sh`) installs dependencies automatically.
 
 | Task                    | Command                                                       |
 | ----------------------- | ------------------------------------------------------------- |
