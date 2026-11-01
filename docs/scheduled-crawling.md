@@ -2,11 +2,11 @@
 
 ## Overview
 
-Runs every 15 minutes via Trigger.dev to automatically ingest crypto news articles.
+Runs every 2 hours via Trigger.dev to automatically ingest crypto news articles.
 
 - **Task ID**: `crawl-crypto-news`
 - **File**: `trigger/crawl-crypto-news.ts`
-- **Schedule**: `*/15 * * * *` (every 15 minutes)
+- **Schedule**: `0 */2 * * *` (every 2 hours)
 - **Max Duration**: 10 minutes
 
 ## How It Works
