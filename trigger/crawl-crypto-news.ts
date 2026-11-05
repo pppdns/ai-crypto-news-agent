@@ -3,10 +3,10 @@ import { freeEncoder } from '@/lib/server/chunking';
 import { crawlNews } from '@/lib/server/crawler';
 
 /**
- * Scheduled task to crawl crypto news every 15 minutes
+ * Scheduled task to crawl crypto news every 2 hours
  *
  * This task:
- * - Runs every 15 minutes
+ * - Runs every 2 hours
  * - Fetches articles from RSS feeds
  * - Scrapes content using Firecrawl
  * - Stores articles with embeddings in Supabase
@@ -19,8 +19,8 @@ import { crawlNews } from '@/lib/server/crawler';
  */
 export const crawlCryptoNewsTask = schedules.task({
   id: 'crawl-crypto-news',
-  // Run every 15 minutes
-  cron: '*/15 * * * *',
+  // Run every 2 hours
+  cron: '0 */2 * * *',
   // Set max duration to 10 minutes (allow plenty of time for scraping)
   maxDuration: 600, // 10 minutes in seconds
   retry: {

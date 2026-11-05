@@ -41,7 +41,7 @@ Ingests crypto news from **6 major publishers** → Indexes with **hybrid vector
 
 ## System Architecture
 
-### Ingestion Pipeline (Runs every 15 Minutes)
+### Ingestion Pipeline (Runs every 2 Hours)
 
 **RSS Feeds** → **Firecrawl Extraction** → **Normalization & Data Cleaning** → **Chunk & Embed** → **Supabase Postgres**
 
@@ -125,7 +125,7 @@ Streaming Response + Citations
 | **HNSW index (m=16, ef=64)**                | 97-99% recall with fast ANN search, superior to IVFFlat                                                             |
 | **LangGraph conditional routing**           | Skips LLM re-ranking when < 10 candidates (cost/latency optimization)                                               |
 | **Vercel AI SDK**                           | Streaming tokens for responsive UI                                                                                  |
-| **Trigger.dev**                             | Reliable 15-minute scheduled ingestion with retries                                                                 |
+| **Trigger.dev**                             | Reliable 2-hour scheduled ingestion with retries                                                                    |
 
 ---
 
@@ -169,7 +169,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 | **Database**           | Supabase Postgres + pgvector 0.8.0                           |
 | **AI/LLM**             | OpenAI (embeddings + generation), LangChain, LangGraph 1.0.1 |
 | **UI**                 | HeroUI (NextUI), Tailwind CSS, Lucide React                  |
-| **Background Jobs**    | Trigger.dev (15-min scheduled crawling)                      |
+| **Background Jobs**    | Trigger.dev (2-hour scheduled crawling)                      |
 | **Content Extraction** | Firecrawl                                                    |
 
 ---
@@ -279,7 +279,7 @@ Visit [http://localhost:3021](http://localhost:3021) to use the chat interface.
 npx tsx scripts/crawl-news.ts
 ```
 
-**Option 2: Scheduled crawling** (every 15 minutes via Trigger.dev)
+**Option 2: Scheduled crawling** (every 2 hours via Trigger.dev)
 
 ```bash
 # Start Trigger.dev dev server
