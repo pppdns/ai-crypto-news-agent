@@ -2,20 +2,17 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(npm run test:run:*)",
+      "Bash(npm run test:run)",
       "Bash(npm run typecheck)",
       "Bash(npm run lint)",
       "Bash(npm run lint:fix)",
       "Bash(npm run format:check)",
       "Bash(npm ci)",
-      "Bash(npx vitest run:*)",
-      "Bash(npx eslint:*)",
-      "Bash(npx prettier:*)",
-      "Bash(npx tsc --noEmit:*)",
-      "Bash(git status:*)",
-      "Bash(git diff:*)",
-      "Bash(git log:*)",
-      "Bash(git show:*)"
+      "Bash(git status)",
+      "Bash(git diff)",
+      "Bash(git diff --staged)",
+      "Bash(git diff --stat)",
+      "Bash(git log --oneline)"
     ],
     "ask": [
       "Bash(npm run trigger:deploy:*)",

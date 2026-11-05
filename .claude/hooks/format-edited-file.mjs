@@ -8,7 +8,7 @@
  * `.prettierignore`). Never blocks Claude: any failure exits 0 with a note on stderr.
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 
 let input = '';
@@ -21,9 +21,10 @@ process.stdin.on('end', () => {
     const projectDir = process.env.CLAUDE_PROJECT_DIR || payload?.cwd || process.cwd();
     const prettierBin = path.join(projectDir, 'node_modules', '.bin', 'prettier');
 
-    // Only format files inside this project, and only when dependencies are installed
+    // Only format files inside this project, and only when dependencies are installed.
+    // Compare real paths so a symlink inside the repo can't point the hook at an outside file.
     if (!filePath || !existsSync(filePath) || !existsSync(prettierBin)) process.exit(0);
-    const relative = path.relative(projectDir, filePath);
+    const relative = path.relative(realpathSync(projectDir), realpathSync(filePath));
     if (relative.startsWith('..') || path.isAbsolute(relative)) process.exit(0);
 
     const result = spawnSync(prettierBin, ['--write', '--ignore-unknown', '--log-level', 'warn', filePath], {
