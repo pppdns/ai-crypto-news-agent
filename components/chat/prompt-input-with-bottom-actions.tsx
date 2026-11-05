@@ -19,8 +19,8 @@ export default function Component({ input, setInput, sendMessage, isLoading }: P
   const ideas = [
     'Latest XRP news?',
     'How did Bitcoin perform this week?',
-    'What is the latest news on the SEC vs Binance lawsuit?',
-    "How did Trump's China tariff announcements affect Bitcoin prices?",
+    'Any major crypto hacks or exploits recently?',
+    "What's new in crypto regulation?",
   ];
 
   // Auto-focus the input on page load
