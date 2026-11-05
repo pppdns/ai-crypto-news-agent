@@ -1,126 +1,106 @@
+/**
+ * Global styles: Tailwind v4, shadcn/ui base styles and the app's design tokens.
+ *
+ * The app is dark-only: the tokens below live on :root and `<html>` always carries the
+ * `dark` class, so shadcn components' `dark:` variants apply. The single accent color is
+ * `--primary` (a warm gold); everything else is a cool neutral ink scale.
+ */
 @import 'tailwindcss';
-@plugin './hero.mjs';
-@source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
-/* @custom-variant dark (&:is(.dark *)); /* Dark mode is disabled for now */
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  /* Dark mode is disabled for now */
-  /* :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  } */
+:root {
+  color-scheme: dark;
+
+  /* Ink neutrals with a faint cool cast */
+  --background: oklch(0.16 0.006 265);
+  --foreground: oklch(0.95 0.004 265);
+  --card: oklch(0.19 0.007 265);
+  --card-foreground: oklch(0.95 0.004 265);
+  --popover: oklch(0.2 0.007 265);
+  --popover-foreground: oklch(0.95 0.004 265);
+  --secondary: oklch(0.245 0.008 265);
+  --secondary-foreground: oklch(0.95 0.004 265);
+  --muted: oklch(0.235 0.008 265);
+  --muted-foreground: oklch(0.69 0.012 265);
+  --accent: oklch(0.255 0.008 265);
+  --accent-foreground: oklch(0.95 0.004 265);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+
+  /* The one accent: warm gold */
+  --primary: oklch(0.83 0.135 82);
+  --primary-foreground: oklch(0.22 0.04 70);
+  --ring: oklch(0.83 0.135 82);
+
+  --destructive: oklch(0.7 0.18 24);
+  --radius: 0.625rem;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+  ::selection {
+    background-color: oklch(0.83 0.135 82 / 30%);
+  }
 }
 
-/* Markdown content styling */
-.markdown-content p {
-  margin-bottom: 1em;
-}
-
-.markdown-content p:last-child {
-  margin-bottom: 0;
-}
-
-.markdown-content ul,
-.markdown-content ol {
-  margin-bottom: 1em;
-  padding-left: 1.5em;
-}
-
-.markdown-content ul {
-  list-style-type: disc;
-}
-
-.markdown-content ol {
-  list-style-type: decimal;
-}
-
-.markdown-content li {
-  margin-bottom: 0.5em;
-}
-
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3,
-.markdown-content h4,
-.markdown-content h5,
-.markdown-content h6 {
-  font-weight: 600;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-}
-
-.markdown-content h1 {
-  font-size: 1.5em;
-}
-
-.markdown-content h2 {
-  font-size: 1.25em;
-}
-
-.markdown-content h3 {
-  font-size: 1.1em;
-}
-
-.markdown-content code {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  font-family: var(--font-mono);
-  font-size: 0.9em;
-}
-
-.markdown-content pre {
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 1em;
-  border-radius: 6px;
-  overflow-x: auto;
-  margin-bottom: 1em;
-}
-
-.markdown-content pre code {
-  background-color: transparent;
-  padding: 0;
-}
-
-.markdown-content blockquote {
-  border-left: 3px solid rgba(0, 0, 0, 0.1);
-  padding-left: 1em;
-  margin-left: 0;
-  margin-bottom: 1em;
-  color: rgba(0, 0, 0, 0.7);
-}
-
-.markdown-content a {
-  color: #0070f3;
-  text-decoration: underline;
-}
-
-.markdown-content a:hover {
-  color: #0051cc;
-}
-
-.markdown-content strong {
-  font-weight: 600;
-}
-
-.markdown-content em {
-  font-style: italic;
+/* Answer body rendered from the model's markdown (see components/chat/answer.tsx) */
+@utility prose-answer {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-links: var(--primary);
+  --tw-prose-bullets: var(--muted-foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-quotes: var(--muted-foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-hr: var(--border);
 }

@@ -149,14 +149,22 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 
 ### Chat Interface (root page)
 
-- Single-turn Q&A with streaming responses
+- Streaming answers in a scrolling thread (each question is answered on its own; earlier turns stay on screen)
 - Strict citations: every claim backed by article ID, date, and source
 - Returns **"No recent news"** instead of hallucinating
 - Citation cards with title, source, date, and URL
+- Stop a running answer, retry a failed one, start a new chat
+- Start screen with suggested questions and the latest headlines in the index
 
 ### News List (`/news`)
 
-- Browse all ingested articles
+- Browse ingested articles, newest first
+- Search titles and summaries, filter by publisher
+
+### Look and feel
+
+- Dark-only theme: cool ink neutrals with a single gold accent (tokens in `app/globals.css`)
+- Built with [shadcn/ui](https://ui.shadcn.com) (Radix base, `radix-nova` style); add components with `pnpm dlx shadcn@latest add <name>`
 
 ---
 
@@ -168,7 +176,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 | **Language**           | TypeScript (strict mode)                                     |
 | **Database**           | Supabase Postgres + pgvector 0.8.0                           |
 | **AI/LLM**             | OpenAI (embeddings + generation), LangChain, LangGraph 1.0.1 |
-| **UI**                 | HeroUI (NextUI), Tailwind CSS, Lucide React                  |
+| **UI**                 | shadcn/ui (Radix), Tailwind CSS v4, Lucide React             |
 | **Background Jobs**    | Trigger.dev (2-hour scheduled crawling)                      |
 | **Content Extraction** | Firecrawl                                                    |
 
@@ -184,6 +192,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 - **[Crypto News Sources](docs/crypto-news-sources.md)** - RSS feed details
 - **[Testing](docs/testing.md)** - Testing guide with Vitest
 - **[CLAUDE.md](CLAUDE.md)** - Guide for Claude Code (commands, code map, conventions). Shared settings, hooks and slash commands live in `.claude/`
+- **MCP servers** - `.mcp.json` (and `.cursor/mcp.json`) add `next-devtools` and a **read-only** Supabase MCP for the production project, so coding agents can query production data without write access. Sign in to Supabase via OAuth on first use (`/mcp` in Claude Code)
 
 ---
 

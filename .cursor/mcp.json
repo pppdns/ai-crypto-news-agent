@@ -3,6 +3,9 @@
     "next-devtools": {
       "command": "npx",
       "args": ["-y", "next-devtools-mcp@latest"]
+    },
+    "supabase": {
+      "url": "https://mcp.supabase.com/mcp?project_ref=gfkqhbbhnsrztyjlazdt&read_only=true&features=database,debugging,development,docs"
     }
   }
 }

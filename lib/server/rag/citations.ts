@@ -175,7 +175,7 @@ async function fetchArticleMetadata(articleIds: string[]): Promise<
  * @param text - Text with citation markers
  * @returns Clean text without citation markers
  */
-function removeCitationMarkers(text: string): string {
+export function removeCitationMarkers(text: string): string {
   let cleanedText = text;
 
   // Remove [Article ID: uuid] format
@@ -190,11 +190,15 @@ function removeCitationMarkers(text: string): string {
   // Remove standalone [uuid] format
   cleanedText = cleanedText.replace(/\[[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\]/gi, '');
 
-  // Clean up any double spaces left behind
-  cleanedText = cleanedText.replace(/\s{2,}/g, ' ');
+  // Clean up double spaces left behind. Only spaces and tabs: newlines carry the markdown
+  // structure (paragraphs, lists) and must survive.
+  cleanedText = cleanedText.replace(/[ \t]{2,}/g, ' ');
 
   // Clean up space before punctuation
-  cleanedText = cleanedText.replace(/\s+([.,;!?])/g, '$1');
+  cleanedText = cleanedText.replace(/[ \t]+([.,;!?])/g, '$1');
+
+  // Clean up trailing spaces at line ends
+  cleanedText = cleanedText.replace(/[ \t]+$/gm, '');
 
   return cleanedText.trim();
 }

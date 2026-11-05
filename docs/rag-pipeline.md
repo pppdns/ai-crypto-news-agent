@@ -414,50 +414,34 @@ const RERANK_PARAMS = {
 
 ### Chat Component
 
-**Location**: `components/chat/prompt-container-with-conversation.tsx`
+**Location**: `components/chat/chat.tsx` (screen), `components/chat/use-ask.ts` (state), `lib/client/ask-stream.ts` (response parsing)
 
-**Architecture**: Single-turn conversation (one question, one answer at a time)
+**Architecture**: The UI keeps a scrolling history of the session's question/answer turns, but each question is sent to `/ask` on its own; the backend stays single-turn and gets no prior context.
 
 **Flow**:
 
-1. User submits question via input or suggestion button
-2. Component sends POST request to `/ask` endpoint with `{ query: string }`
-3. Previous question, answer, and citations are cleared immediately
-4. Receives streaming text response token by token
-5. Updates assistant answer state progressively during streaming
-6. Extracts citations from final data event
-7. Displays complete answer with citations
+1. User submits a question from the composer or a suggestion button
+2. `useAsk` appends a turn (status `searching`) and sends `POST /ask` with `{ query: string }`
+3. While tokens stream in, `parseAskStream` returns the answer text so far, with citation markers (`[Article ID: …]`, including a half-received one) hidden so they never flash on screen; the turn moves to `answering`
+4. The trailing `cleanedText` event replaces the answer with the server-cleaned version, and the `citations` event fills the sources
+5. The turn becomes `done`, or `error` (shown with a "Try again" action), or `stopped` if the user pressed Stop (the request is aborted and the partial answer is kept)
 
-**State Management**:
+Only one request runs at a time. "New chat" in the header clears the thread.
 
-```typescript
-const [userQuestion, setUserQuestion] = useState('');
-const [assistantAnswer, setAssistantAnswer] = useState('');
-const [citations, setCitations] = useState<Citation[]>([]);
-const [isLoading, setIsLoading] = useState(false);
-```
-
-**API Request Format**:
+**Turn state**:
 
 ```typescript
-fetch('/ask', {
-  method: 'POST',
-  body: JSON.stringify({ query: userQuestion }),
-});
+interface Turn {
+  id: string;
+  question: string;
+  answer: string;
+  citations: Citation[];
+  status: 'searching' | 'answering' | 'done' | 'stopped' | 'error';
+  error?: string;
+}
 ```
 
-**Citation Display**:
-
-```tsx
-<Citations citations={citations} />
-```
-
-Each citation shows:
-
-- Clickable article title
-- Source name
-- Relative publish date
-- External link icon
+**Citation Display**: `components/chat/citations.tsx` renders one linked card per citation with the article title, source name and relative date. An answer of exactly "No recent news" is shown as a short notice with a link to `/news` instead.
 
 ### Data Format
 
@@ -469,25 +453,16 @@ Each citation shows:
 }
 ```
 
-**Streaming Response**:
+**Streaming Response** (raw tokens, then trailer events):
 
 ```
-Bitcoin recently...
- reached new highs
+Bitcoin recently reached new highs [Article ID: <uuid>].
+data: {"type":"cleanedText","text":"Bitcoin recently reached new highs."}
+
 data: {"type":"citations","citations":[{...}]}
 ```
 
-**Citation Extraction**:
-
-```typescript
-// Parse streaming data
-if (line.startsWith('data: ')) {
-  const parsed = JSON.parse(line.slice(6));
-  if (parsed.type === 'citations') {
-    setCitations(parsed.citations);
-  }
-}
-```
+An `{"type":"error","message":"…"}` event may replace the trailers if answer generation fails. The "No recent news" path streams plain text with no events.
 
 ## Testing
 
