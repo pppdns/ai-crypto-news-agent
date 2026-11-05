@@ -184,6 +184,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 - **[Crypto News Sources](docs/crypto-news-sources.md)** - RSS feed details
 - **[Testing](docs/testing.md)** - Testing guide with Vitest
 - **[CLAUDE.md](CLAUDE.md)** - Guide for Claude Code (commands, code map, conventions). Shared settings, hooks and slash commands live in `.claude/`
+- **MCP servers** - `.mcp.json` (and `.cursor/mcp.json`) add `next-devtools` and a **read-only** Supabase MCP for the production project, so coding agents can query production data without write access. Sign in to Supabase via OAuth on first use (`/mcp` in Claude Code)
 
 ---
 
