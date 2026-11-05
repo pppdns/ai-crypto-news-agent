@@ -8,7 +8,7 @@ import { formatRelativeTime } from '@/lib/client/relative-time';
 import type { IndexStats } from '@/lib/client/types';
 
 export const SUGGESTED_QUESTIONS = [
-  'What happened with Solana ETFs this week?',
+  "What's new in crypto regulation?",
   'How did Bitcoin perform this week?',
   'Latest XRP news?',
   'Any major exchange hacks recently?',
