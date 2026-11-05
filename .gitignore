@@ -45,3 +45,7 @@ next-env.d.ts
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Claude Code personal overrides (shared config lives in .claude/settings.json and CLAUDE.md)
+.claude/settings.local.json
+CLAUDE.local.md

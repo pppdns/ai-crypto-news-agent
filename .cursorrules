@@ -86,7 +86,7 @@ RLS: Enabled to disable public access; backend uses service role key (bypasses R
 
 - `content`: The plain text content of a paragraph of an article.
 - Metadata such as `title`, `source_name`, and `published_at` should be resolved via join on `articles` or exposed via a materialized view. Optional denormalization is acceptable for performance.
-- `embedding` (vector(3072)): OpenAI embedding for semantic similarity search. Do not prepend metadata into the embedded text; include metadata via joins or a view.
+- `embedding` (vector(1536)): OpenAI embedding for semantic similarity search. Do not prepend metadata into the embedded text; include metadata via joins or a view.
 - `token_count`: Integer token count for the chunk (enables capping embedder input and budgeting context).
 
 Note: The original article's text is not stored in the database, only its normalized/cleaned summary. If needed, we can store the original content in the future too.
