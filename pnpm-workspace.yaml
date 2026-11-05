@@ -3,3 +3,6 @@ allowBuilds:
   '@sentry/cli': true
   esbuild: true
   sharp: true
+permissions:
+  '@trigger.dev/sdk':
+    skills: true
