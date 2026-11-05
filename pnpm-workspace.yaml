@@ -1,12 +1,7 @@
 allowBuilds:
-  '@heroui/shared-utils': true
   '@sentry/cli': true
   esbuild: true
   sharp: true
-# HeroUI: hoist @heroui/theme so Tailwind's @source in app/globals.css can scan
-# node_modules/@heroui/theme/dist (pnpm does not hoist transitive deps by default).
-publicHoistPattern:
-  - '*@heroui/*'
 permissions:
   '@trigger.dev/sdk':
     skills: true

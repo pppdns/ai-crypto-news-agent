@@ -169,9 +169,9 @@ Display snippet previews with URLs.
 
 ## UI Requirements
 
-Simple chat interface:
+Simple chat interface (dark-only theme, neutral palette with one gold accent):
 
-- User enters a question
+- User enters a question; earlier questions and answers of the session stay visible (each is still sent to `/ask` on its own)
 - System shows answer to the question
 - System shows citations with their links, titles, dates, and source names
 - Loading indicator while retrieving/answering
@@ -180,7 +180,7 @@ Simple chat interface:
 
 Extra pages:
 
-- News article list page at `/news`. Lists articles from Supabase in recency order. Shows title, summary text (`text_summary`), clickable link to source, date for each article. This is a server component.
+- News article list page at `/news`. Lists articles from Supabase in recency order. Shows title, summary text (`text_summary`), clickable link to source, date for each article. The page is a server component that loads the articles; search and publisher filtering run in a client component.
 
 ## Success Criteria
 
@@ -234,7 +234,7 @@ Acceptable for a prototype.
 
 ### UI & Styling
 
-- **HeroUI (NextUI)** - React component library
+- **shadcn/ui** (Radix base, `radix-nova` style) - components copied into `components/ui/`; add more with `pnpm dlx shadcn@latest add <name>`
 - **Tailwind CSS** for styling
 - **Lucide React** icons
 

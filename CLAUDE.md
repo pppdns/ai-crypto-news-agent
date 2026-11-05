@@ -49,7 +49,8 @@ lib/server/                Server-only code (never import from client components
   crawler.ts               RSS → Firecrawl → ingest loop, updates sources.last_scraped_at
   rss-parser.ts, firecrawl.ts, chunking.ts, embeddings.ts, ingestion.ts, url-utils.ts
   supabase.ts              Service-role client (bypasses RLS)
-lib/client/                Browser-safe helpers
+  index-stats.ts           Article/source counts and latest headlines for the UI
+lib/client/                Browser-safe helpers: ask-stream.ts (parses /ask body), relative-time.ts, types.ts
 trigger/crawl-crypto-news.ts  Trigger.dev scheduled crawl (cron in that file)
 scripts/                   CLI entry points (run with tsx)
 supabase/migrations/       Numbered SQL migrations; database.types.ts is generated
@@ -59,6 +60,7 @@ docs/                      Deep dives: crawler, ingestion, RAG, scheduling, test
 
 ## Conventions
 
+- UI is shadcn/ui on Radix (`components.json`, style `radix-nova`). Use the shadcn components and semantic tokens (`bg-background`, `text-muted-foreground`, `bg-primary`) rather than raw colors. The app is dark-only: `<html>` always has the `dark` class and the tokens live on `:root` in `app/globals.css`.
 - Imports use the `@/` alias (project root). Prettier sorts imports automatically (react/next, third party, `@/`, relative); don't hand-order them.
 - Prettier: single quotes, 120-char lines. Unused vars must be prefixed with `_` to pass ESLint.
 - Tests are Vitest, co-located as `*.test.ts` next to the source, with `globals: true`. Mock OpenAI, Firecrawl and Supabase; unit tests must not hit the network. See `docs/testing.md`.
