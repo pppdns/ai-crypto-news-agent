@@ -11,23 +11,23 @@ Guidance for Claude Code when working in this repository. The full product spec 
 
 ## Commands
 
-Node 22 (`.nvmrc`). Install with `npm ci`. In Claude Code cloud sessions the SessionStart hook (`.claude/hooks/session-start.sh`) installs dependencies automatically.
+Node 22 (`.nvmrc`) and pnpm (version pinned in `package.json` `packageManager`; `corepack enable pnpm`). Install with `pnpm install --frozen-lockfile`. In Claude Code cloud sessions the SessionStart hook (`.claude/hooks/session-start.sh`) installs dependencies automatically.
 
-| Task                    | Command                                                       |
-| ----------------------- | ------------------------------------------------------------- |
-| Dev server (port 3021)  | `npm run dev`                                                 |
-| Unit tests (single run) | `npm run test:run` (never plain `npm test`, it starts watch)  |
-| Single test file        | `npx vitest run lib/server/url-utils.test.ts`                 |
-| Type check              | `npm run typecheck`                                           |
-| Lint                    | `npm run lint` (`npm run lint:fix` to autofix)                |
-| Format check / write    | `npm run format:check` / `npx prettier --write <files>`       |
-| Local Supabase          | `npm run supabase:start` / `npm run supabase:stop` (Docker)   |
-| Regenerate DB types     | `npm run supabase:gen-types:dev` (after any migration change) |
-| Load mock articles      | `npx tsx scripts/mock-ingest.ts`                              |
-| Run the real crawler    | `npx tsx scripts/crawl-news.ts`                               |
-| Trigger.dev local / prd | `npm run trigger:dev` / `npm run trigger:deploy`              |
+| Task                    | Command                                                    |
+| ----------------------- | ---------------------------------------------------------- |
+| Dev server (port 3021)  | `pnpm dev`                                                 |
+| Unit tests (single run) | `pnpm test:run` (never plain `pnpm test`, it starts watch) |
+| Single test file        | `pnpm vitest run lib/server/url-utils.test.ts`             |
+| Type check              | `pnpm typecheck`                                           |
+| Lint                    | `pnpm lint` (`pnpm lint:fix` to autofix)                   |
+| Format check / write    | `pnpm format:check` / `pnpm prettier --write <files>`      |
+| Local Supabase          | `pnpm supabase:start` / `pnpm supabase:stop` (Docker)      |
+| Regenerate DB types     | `pnpm supabase:gen-types:dev` (after any migration change) |
+| Load mock articles      | `pnpm tsx scripts/mock-ingest.ts`                          |
+| Run the real crawler    | `pnpm tsx scripts/crawl-news.ts`                           |
+| Trigger.dev local / prd | `pnpm trigger:dev` / `pnpm trigger:deploy`                 |
 
-Before calling a change done, run `npm run typecheck`, `npm run lint`, `npm run test:run`, and `npx prettier --check` on the changed files. The husky pre-commit hook runs lint-staged (prettier + eslint --fix) and `tsc`, so commits fail if these are broken.
+Before calling a change done, run `pnpm typecheck`, `pnpm lint`, `pnpm test:run`, and `pnpm prettier --check` on the changed files. The husky pre-commit hook runs lint-staged (prettier + eslint --fix) and `tsc`, so commits fail if these are broken.
 
 Scripts that touch the database, OpenAI or Firecrawl (`mock-ingest`, `crawl-news`, `/ask`) need real env vars and a running Supabase; they are not runnable in a bare sandbox. Unit tests need neither.
 
@@ -73,7 +73,7 @@ docs/                      Deep dives: crawler, ingestion, RAG, scheduling, test
 - Re-ranking is currently disabled in practice: `RERANK_THRESHOLD` (50) in `rag/workflow.ts` is above `CANDIDATE_LIMIT` (40), so the workflow always takes the skip-rerank path.
 - The answer model is set in `app/ask/route.ts`; the reranker model is set in `rag/reranker.ts`.
 - `.env.development` is committed and only holds the public default keys for a local self-hosted Supabase. Never put real secrets in it.
-- The crawl schedule is the `cron` field in `trigger/crawl-crypto-news.ts`; it only takes effect after `npm run trigger:deploy`.
+- The crawl schedule is the `cron` field in `trigger/crawl-crypto-news.ts`; it only takes effect after `pnpm trigger:deploy`.
 
 ## Product spec
 

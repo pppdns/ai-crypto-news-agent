@@ -14,7 +14,7 @@ FIRECRAWL_API_KEY=your_firecrawl_key
 ## Deploy
 
 ```bash
-npx trigger.dev@latest deploy
+pnpm dlx trigger.dev@latest deploy
 ```
 
 This builds, uploads, and activates your scheduled task automatically.
@@ -36,10 +36,10 @@ This builds, uploads, and activates your scheduled task automatically.
 
 ```bash
 # Run with Trigger.dev dev server
-npx trigger.dev@latest dev
+pnpm dlx trigger.dev@latest dev
 
 # Or run standalone script
-npx tsx scripts/crawl-news.ts
+pnpm tsx scripts/crawl-news.ts
 ```
 
 ## What It Does
@@ -64,5 +64,5 @@ Every 2 hours, the task:
 After changes, redeploy:
 
 ```bash
-npx trigger.dev@latest deploy
+pnpm dlx trigger.dev@latest deploy
 ```

@@ -221,7 +221,7 @@ Acceptable for a prototype.
 ## Supabase and Migrations
 
 - Store DDL in `supabase/migrations` (tables, indexes, generated columns, policies)
-- Regenerate `supabase/database.types.ts` after schema changes using `npm run supabase:gen-types:dev`
+- Regenerate `supabase/database.types.ts` after schema changes using `pnpm supabase:gen-types:dev`
 - Enable pgvector in Supabase by adding a migration containing: `CREATE EXTENSION IF NOT EXISTS vector;` (Supabase will use version 0.8.0)
 
 ## Tech Stack

@@ -6,7 +6,7 @@
  * using Firecrawl, and stores the data in Supabase with embeddings.
  *
  * Usage:
- *   npx tsx scripts/crawl-news.ts
+ *   pnpm tsx scripts/crawl-news.ts
  *
  * Environment variables required:
  *   - SUPABASE_URL

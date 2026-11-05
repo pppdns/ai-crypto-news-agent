@@ -301,7 +301,7 @@ The crawler itself does not implement additional retry logic to keep the code si
 Execute the CLI script from the project root:
 
 ```bash
-npx tsx scripts/crawl-news.ts
+pnpm tsx scripts/crawl-news.ts
 ```
 
 ### Expected Output

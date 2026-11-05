@@ -14,7 +14,7 @@ The ingestion pipeline processes crypto news articles from RSS feeds and stores 
 For manual crawling from RSS feeds (useful for testing or one-off updates):
 
 ```bash
-npx tsx scripts/crawl-news.ts
+pnpm tsx scripts/crawl-news.ts
 ```
 
 This script:

@@ -2,12 +2,12 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(npm run test:run)",
-      "Bash(npm run typecheck)",
-      "Bash(npm run lint)",
-      "Bash(npm run lint:fix)",
-      "Bash(npm run format:check)",
-      "Bash(npm ci)",
+      "Bash(pnpm test:run)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:fix)",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm install --frozen-lockfile)",
       "Bash(git status)",
       "Bash(git diff)",
       "Bash(git diff --staged)",
@@ -15,7 +15,11 @@
       "Bash(git log --oneline)"
     ],
     "ask": [
-      "Bash(npm run trigger:deploy:*)",
+      "Bash(pnpm trigger:deploy:*)",
+      "Bash(pnpm dlx trigger.dev@latest deploy:*)",
+      "Bash(pnpm supabase db push:*)",
+      "Bash(pnpm supabase db reset:*)",
+      "Bash(pnpm tsx scripts/crawl-news.ts:*)",
       "Bash(npx trigger.dev@latest deploy:*)",
       "Bash(npx supabase db push:*)",
       "Bash(npx supabase db reset:*)",

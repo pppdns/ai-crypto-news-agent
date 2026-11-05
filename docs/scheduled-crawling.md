@@ -38,10 +38,10 @@ Set in Trigger.dev dashboard:
 
 ```bash
 # Standalone script
-npx tsx scripts/crawl-news.ts
+pnpm tsx scripts/crawl-news.ts
 
 # Trigger.dev dev mode
-npx trigger.dev@latest dev
+pnpm dlx trigger.dev@latest dev
 
 # Manual trigger
 import { tasks } from '@trigger.dev/sdk/v3';

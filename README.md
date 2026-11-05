@@ -206,6 +206,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 ### Prerequisites
 
 - **Node.js 22+** - Install via [NVM](https://github.com/nvm-sh/nvm#installing-and-updating) (recommended)
+- **pnpm** - The version is pinned in `package.json` (`packageManager`); run `corepack enable pnpm` to use it
 - **Docker** - Required for local Supabase ([Install Docker](https://docs.docker.com/get-docker/))
 - **OpenAI API Key** - [Get one here](https://platform.openai.com/api-keys)
 - **Firecrawl API Key** - [Sign up](https://www.firecrawl.dev/) or [self-host](https://github.com/mendableai/firecrawl)
@@ -223,10 +224,10 @@ nvm install 22
 nvm use 22
 
 # Install dependencies
-npm install
+pnpm install
 
 # Start local Supabase (requires Docker)
-npm run supabase:start
+pnpm supabase:start
 ```
 
 After Supabase starts, it will output:
@@ -260,14 +261,14 @@ Manually run SQL code for migrations through the Supabase UI after you start Sup
 To regenerate TypeScript types after schema changes:
 
 ```bash
-npm run supabase:gen-types:dev
+pnpm supabase:gen-types:dev
 ```
 
 ### Running the Application
 
 ```bash
 # Start Next.js dev server
-npm run dev
+pnpm dev
 ```
 
 Visit [http://localhost:3021](http://localhost:3021) to use the chat interface.
@@ -277,14 +278,14 @@ Visit [http://localhost:3021](http://localhost:3021) to use the chat interface.
 **Option 1: Manual crawl** (one-time)
 
 ```bash
-npx tsx scripts/crawl-news.ts
+pnpm tsx scripts/crawl-news.ts
 ```
 
 **Option 2: Scheduled crawling** (every 2 hours via Trigger.dev)
 
 ```bash
 # Start Trigger.dev dev server
-npm run trigger:dev
+pnpm trigger:dev
 ```
 
 See [docs/scheduled-crawling.md](docs/scheduled-crawling.md) and [Trigger.dev documentation](https://trigger.dev/docs) for production deployment.
@@ -293,16 +294,16 @@ See [docs/scheduled-crawling.md](docs/scheduled-crawling.md) and [Trigger.dev do
 
 ```bash
 # Run tests in watch mode
-npm test
+pnpm test
 
 # Run tests once (CI mode)
-npm run test:run
+pnpm test:run
 
 # Run tests with UI
-npm run test:ui
+pnpm test:ui
 
 # Run tests with coverage
-npm run test:coverage
+pnpm test:coverage
 ```
 
 See [docs/testing.md](docs/testing.md) for detailed testing guide.
@@ -311,7 +312,7 @@ See [docs/testing.md](docs/testing.md) for detailed testing guide.
 
 ```bash
 # Stop Supabase
-npm run supabase:stop
+pnpm supabase:stop
 
 # Stop Next.js (Ctrl+C in the terminal)
 # Stop Trigger.dev (Ctrl+C in the terminal)

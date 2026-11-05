@@ -1,2 +1,2 @@
-npx lint-staged
-npx --yes tsc --noEmit --skipLibCheck --project tsconfig.json
+pnpm exec lint-staged
+pnpm typecheck

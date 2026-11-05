@@ -14,7 +14,7 @@ This project uses [Vitest](https://vitest.dev/) as its testing framework.
 ### Run tests in watch mode (default)
 
 ```bash
-npm test
+pnpm test
 ```
 
 This will run tests and watch for changes, re-running affected tests automatically.
@@ -22,7 +22,7 @@ This will run tests and watch for changes, re-running affected tests automatical
 ### Run tests once (CI mode)
 
 ```bash
-npm run test:run
+pnpm test:run
 ```
 
 This runs all tests once and exits, useful for CI/CD pipelines.
@@ -30,7 +30,7 @@ This runs all tests once and exits, useful for CI/CD pipelines.
 ### Run tests with UI
 
 ```bash
-npm run test:ui
+pnpm test:ui
 ```
 
 Opens Vitest's interactive UI in your browser for exploring and debugging tests.
@@ -38,7 +38,7 @@ Opens Vitest's interactive UI in your browser for exploring and debugging tests.
 ### Run tests with coverage
 
 ```bash
-npm run test:coverage
+pnpm test:coverage
 ```
 
 Generates a coverage report showing which parts of your code are tested.
@@ -137,7 +137,7 @@ These may be added in future iterations with appropriate test infrastructure.
 Tests are designed to run in CI/CD pipelines. Use:
 
 ```bash
-npm run test:run
+pnpm test:run
 ```
 
 This command will:
@@ -151,13 +151,13 @@ This command will:
 ### Run a specific test file
 
 ```bash
-npx vitest run path/to/test-file.test.ts
+pnpm vitest run path/to/test-file.test.ts
 ```
 
 ### Run tests matching a pattern
 
 ```bash
-npx vitest run --grep "normalizeUrl"
+pnpm vitest run --grep "normalizeUrl"
 ```
 
 ### Debug with VS Code
@@ -169,7 +169,7 @@ Add this configuration to `.vscode/launch.json`:
   "type": "node",
   "request": "launch",
   "name": "Debug Vitest Tests",
-  "runtimeExecutable": "npm",
+  "runtimeExecutable": "pnpm",
   "runtimeArgs": ["run", "test"],
   "console": "integratedTerminal",
   "internalConsoleOptions": "neverOpen"
