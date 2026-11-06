@@ -155,6 +155,7 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 - Citation cards with title, source, date, and URL
 - Stop a running answer, retry a failed one, start a new chat
 - Start screen with suggested questions and the latest headlines in the index
+- Suggested questions stay above the composer during a chat (minus the ones already asked), so users can try another without typing
 
 ### News List (`/news`)
 

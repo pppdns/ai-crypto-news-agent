@@ -2,7 +2,8 @@
 
 /**
  * The chat screen. Starts on the empty state (headline, composer, suggestions); after the
- * first question it becomes a scrolling thread with the composer pinned to the bottom.
+ * first question it becomes a scrolling thread with the composer pinned to the bottom and
+ * the not-yet-asked suggestions in a row above it.
  */
 import Link from 'next/link';
 import { SquarePenIcon } from 'lucide-react';
@@ -19,6 +20,7 @@ import { formatShortDate } from '@/lib/client/relative-time';
 import type { IndexStats } from '@/lib/client/types';
 import { Composer } from './composer';
 import { EmptyState } from './empty-state';
+import { SuggestedQuestions } from './suggested-questions';
 import { Turn } from './turn';
 import { useAsk } from './use-ask';
 
@@ -58,6 +60,13 @@ export function Chat({ stats }: { stats: IndexStats | null }) {
           </MessageScrollerProvider>
 
           <div className="mx-auto w-full max-w-3xl px-4 pb-4 sm:px-6">
+            <SuggestedQuestions
+              compact
+              onSelect={ask}
+              disabled={isBusy}
+              asked={turns.map((turn) => turn.question)}
+              className="mb-2.5"
+            />
             {composer}
             <CoverageNote stats={stats} />
           </div>

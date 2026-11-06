@@ -3,16 +3,9 @@
  * most recent headlines in the index (so it's clear how fresh the data is).
  */
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { formatRelativeTime } from '@/lib/client/relative-time';
 import type { IndexStats } from '@/lib/client/types';
-
-export const SUGGESTED_QUESTIONS = [
-  "What's new in crypto regulation?",
-  'How did Bitcoin perform this week?',
-  'Latest XRP news?',
-  'Any major exchange hacks recently?',
-] as const;
+import { SuggestedQuestions } from './suggested-questions';
 
 interface EmptyStateProps {
   stats: IndexStats | null;
@@ -35,20 +28,7 @@ export function EmptyState({ stats, composer, onSuggestion, disabled }: EmptySta
 
       <div className="mt-8">{composer}</div>
 
-      <ul aria-label="Suggested questions" className="mt-4 flex flex-wrap gap-2">
-        {SUGGESTED_QUESTIONS.map((question) => (
-          <li key={question}>
-            <Button
-              variant="outline"
-              className="text-muted-foreground hover:text-foreground h-auto rounded-full px-3.5 py-1.5 font-normal whitespace-normal"
-              disabled={disabled}
-              onClick={() => onSuggestion(question)}
-            >
-              {question}
-            </Button>
-          </li>
-        ))}
-      </ul>
+      <SuggestedQuestions onSelect={onSuggestion} disabled={disabled} className="mt-4" />
 
       {stats && stats.latest.length > 0 && (
         <section aria-labelledby="latest-heading" className="mt-16">
