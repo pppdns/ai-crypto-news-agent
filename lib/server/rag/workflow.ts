@@ -3,9 +3,14 @@
  * Orchestrates: temporal detection → embedding → hybrid search → rerank
  * Uses conditional routing to optimize execution flow
  * Answer generation and citation enrichment happen in the route handler
+ *
+ * Each node is wrapped in a Langfuse observation (span / embedding / retriever), so the
+ * workflow shows up as a nested trace under the `/ask` request (see docs/tracing.md).
  */
 import type { CompiledStateGraph } from '@langchain/langgraph';
 import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
+import { startActiveObservation } from '@langfuse/tracing';
+import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL } from '../constants';
 import { generateEmbedding } from '../embeddings';
 import { hybridSearch } from './hybrid-search';
 import { rerankChunks } from './reranker';
@@ -25,7 +30,7 @@ type RouteDestination = typeof END | 'skipRerank' | 'rerank';
 /**
  * Node: Detect temporal keywords in query
  */
-async function detectTemporalNode(state: RAGState): Promise<Partial<RAGState>> {
+async function detectTemporal(state: RAGState): Promise<Partial<RAGState>> {
   try {
     console.log('Detecting temporal window...');
     const temporal = detectTemporalWindow(state.query);
@@ -49,7 +54,7 @@ async function detectTemporalNode(state: RAGState): Promise<Partial<RAGState>> {
 /**
  * Node: Generate query embedding
  */
-async function generateEmbeddingNode(state: RAGState): Promise<Partial<RAGState>> {
+async function generateQueryEmbedding(state: RAGState): Promise<Partial<RAGState>> {
   try {
     console.log('Generating query embedding...');
     const embedding = await generateEmbedding(state.query);
@@ -70,7 +75,7 @@ async function generateEmbeddingNode(state: RAGState): Promise<Partial<RAGState>
 /**
  * Node: Execute hybrid search
  */
-async function hybridSearchNode(state: RAGState): Promise<Partial<RAGState>> {
+async function searchCandidates(state: RAGState): Promise<Partial<RAGState>> {
   if (!state.queryEmbedding) {
     return { error: 'Query embedding not available' };
   }
@@ -111,7 +116,7 @@ async function hybridSearchNode(state: RAGState): Promise<Partial<RAGState>> {
 /**
  * Node: Re-rank candidates using LLM
  */
-async function rerankNode(state: RAGState): Promise<Partial<RAGState>> {
+async function rerankCandidates(state: RAGState): Promise<Partial<RAGState>> {
   if (state.candidates.length === 0) {
     return { rerankedChunks: [] };
   }
@@ -138,7 +143,7 @@ async function rerankNode(state: RAGState): Promise<Partial<RAGState>> {
  * Uses all available candidates directly without LLM scoring
  * Since we have < RERANK_THRESHOLD candidates, we use them all rather than discarding any
  */
-async function skipRerankNode(state: RAGState): Promise<Partial<RAGState>> {
+async function useCandidatesDirectly(state: RAGState): Promise<Partial<RAGState>> {
   console.log('Skipping re-ranking (too few candidates)...');
   // Use all candidates since we already have so few (< RERANK_THRESHOLD)
   // They're already sorted by hybrid search score
@@ -147,6 +152,79 @@ async function skipRerankNode(state: RAGState): Promise<Partial<RAGState>> {
   return {
     rerankedChunks: state.candidates,
   };
+}
+
+/** Compact chunk summary for trace payloads (full chunk text would bloat the trace). */
+function summarizeChunks(chunks: RAGState['candidates']) {
+  return chunks.map((c) => ({ articleId: c.article_id, title: c.title, source: c.source_name, score: c.score }));
+}
+
+// Traced LangGraph nodes. Each records curated input/output on its Langfuse observation.
+
+function detectTemporalNode(state: RAGState): Promise<Partial<RAGState>> {
+  return startActiveObservation('detect-temporal-window', async (span) => {
+    const result = await detectTemporal(state);
+    span.update({ input: { query: state.query }, output: { days: result.temporalWindow } });
+    return result;
+  });
+}
+
+function generateEmbeddingNode(state: RAGState): Promise<Partial<RAGState>> {
+  return startActiveObservation(
+    'embed-query',
+    async (embedding) => {
+      const result = await generateQueryEmbedding(state);
+      embedding.update({
+        model: EMBEDDING_MODEL,
+        input: state.query,
+        output: { dimensions: result.queryEmbedding?.length ?? 0 },
+        level: result.error ? 'ERROR' : 'DEFAULT',
+        statusMessage: result.error ?? undefined,
+      });
+      return result;
+    },
+    { asType: 'embedding' },
+  );
+}
+
+function hybridSearchNode(state: RAGState): Promise<Partial<RAGState>> {
+  return startActiveObservation(
+    'hybrid-search',
+    async (retriever) => {
+      const result = await searchCandidates(state);
+      retriever.update({
+        input: { query: state.query, temporalWindowDays: state.temporalWindow, limit: CANDIDATE_LIMIT },
+        output: summarizeChunks(result.candidates ?? []),
+        metadata: { embeddingDimensions: EMBEDDING_DIMENSIONS, candidateCount: result.candidates?.length ?? 0 },
+        level: result.error ? 'ERROR' : 'DEFAULT',
+        statusMessage: result.error ?? undefined,
+      });
+      return result;
+    },
+    { asType: 'retriever' },
+  );
+}
+
+function rerankNode(state: RAGState): Promise<Partial<RAGState>> {
+  return startActiveObservation('rerank', async (span) => {
+    const result = await rerankCandidates(state);
+    span.update({
+      input: { candidates: state.candidates.length, topK: MAX_CHUNKS },
+      output: summarizeChunks(result.rerankedChunks ?? []),
+    });
+    return result;
+  });
+}
+
+function skipRerankNode(state: RAGState): Promise<Partial<RAGState>> {
+  return startActiveObservation('skip-rerank', async (span) => {
+    const result = await useCandidatesDirectly(state);
+    span.update({
+      input: { candidates: state.candidates.length, rerankThreshold: RERANK_THRESHOLD },
+      output: summarizeChunks(result.rerankedChunks ?? []),
+    });
+    return result;
+  });
 }
 
 /**
@@ -239,14 +317,26 @@ export async function executeRAGWorkflow(query: string): Promise<RAGState> {
     // Build and compile the graph
     const graph = buildRAGGraph();
 
-    // Execute the graph
-    const result = await graph.invoke(initialState);
+    // Execute the graph inside a chain observation so all node spans nest under it
+    const result = await startActiveObservation(
+      'rag-workflow',
+      async (chain) => {
+        const state = (await graph.invoke(initialState)) as unknown as RAGState;
+        chain.update({
+          input: { query },
+          output: { temporalWindowDays: state.temporalWindow, contextChunks: state.rerankedChunks.length },
+          level: state.error ? 'ERROR' : 'DEFAULT',
+          statusMessage: state.error ?? undefined,
+        });
+        return state;
+      },
+      { asType: 'chain' },
+    );
 
     console.log('\n=== RAG workflow completed ===\n');
 
-    // The result from LangGraph has the same shape as RAGState
-    // Type assertion is safe here as we control the graph structure
-    return result as unknown as RAGState;
+    // The result from LangGraph has the same shape as RAGState (asserted above; we control the graph structure)
+    return result;
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('RAG workflow execution error:', error);

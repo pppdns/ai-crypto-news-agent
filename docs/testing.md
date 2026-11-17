@@ -1,6 +1,6 @@
 # Testing Guide
 
-This project uses [Vitest](https://vitest.dev/) as its testing framework.
+This project uses [Vitest](https://vitest.dev/) as its testing framework. LLM quality (retrieval, answers, red team) is measured separately with PromptFoo evals; see [evals.md](evals.md).
 
 ## Overview
 

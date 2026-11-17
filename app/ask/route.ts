@@ -1,9 +1,11 @@
-import { openai } from '@ai-sdk/openai';
-import { streamText } from 'ai';
+import { after } from 'next/server';
+import { startObservation } from '@langfuse/tracing';
+import { ROOT_CONTEXT, context, trace } from '@opentelemetry/api';
+import { NO_RECENT_NEWS, generateAnswerStream } from '@/lib/server/rag/answer';
 import { parseCitations } from '@/lib/server/rag/citations';
-import { getAnswerPrompt } from '@/lib/server/rag/prompts';
 import { Citation } from '@/lib/server/rag/types';
 import { executeRAGWorkflow } from '@/lib/server/rag/workflow';
+import { flushTraces } from '@/lib/server/tracing';
 
 export const maxDuration = 30;
 
@@ -27,20 +29,30 @@ interface ErrorMessage {
 }
 
 export async function POST(req: Request) {
+  // Root Langfuse observation for the whole request; LangGraph nodes and the answer generation nest under it.
+  // It is ended manually because the answer keeps streaming after this handler returns, and it is started
+  // from ROOT_CONTEXT so it is the trace root in Langfuse (Next.js's own HTTP span is not exported there).
+  const rootSpan = context.with(ROOT_CONTEXT, () => startObservation('ask', {}, { asType: 'agent' }));
+  const rootContext = trace.setSpan(context.active(), rootSpan.otelSpan);
+  after(flushTraces);
+
   try {
     const { query }: RequestBody = await req.json();
 
     if (!query || !query.trim()) {
+      rootSpan.update({ level: 'WARNING', statusMessage: 'Empty query' }).end();
       return new Response('No user query provided', { status: 400 });
     }
     console.log(`Processing query: "${query}"`);
+    rootSpan.update({ input: { query } });
 
     // Execute RAG workflow (non-streaming for retrieval)
-    const ragResult = await executeRAGWorkflow(query);
+    const ragResult = await context.with(rootContext, () => executeRAGWorkflow(query));
 
     // Handle errors
     if (ragResult.error) {
       console.error('RAG workflow error:', ragResult.error);
+      rootSpan.update({ level: 'ERROR', statusMessage: ragResult.error }).end();
       return new Response(
         JSON.stringify({
           error: 'Failed to process query',
@@ -53,31 +65,22 @@ export async function POST(req: Request) {
       );
     }
 
-    // Handle "No recent news" case
+    // Handle "No recent news" case: no context, so no LLM call is needed
     if (ragResult.rerankedChunks.length === 0) {
       console.log('No relevant results found');
-
-      // Stream a simple response
-      const result = streamText({
-        model: openai('gpt-4o-mini'),
-        prompt: 'Respond with exactly: "No recent news"',
-      });
-
-      return result.toTextStreamResponse();
+      rootSpan
+        .update({
+          output: NO_RECENT_NEWS,
+          metadata: { temporalWindowDays: ragResult.temporalWindow, contextChunks: 0 },
+        })
+        .end();
+      return new Response(NO_RECENT_NEWS, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
 
     // Stream the answer with citations
     console.log('Streaming answer with citations...');
 
-    // Generate prompt with context
-    const prompt = getAnswerPrompt(query, ragResult.rerankedChunks);
-
-    // gpt-5-chat-latest was removed from the API on 2026-07-23.
-    // Terra is enough here: the model only has to summarize retrieved chunks and cite them.
-    const result = streamText({
-      model: openai('gpt-5.6-terra'),
-      prompt,
-    });
+    const result = context.with(rootContext, () => generateAnswerStream(query, ragResult.rerankedChunks));
 
     const outputStream = new ReadableStream<string>({
       async start(controller) {
@@ -103,14 +106,27 @@ export async function POST(req: Request) {
             citations,
           };
           controller.enqueue(`\ndata: ${JSON.stringify(citationsMessage)}\n\n`);
+
+          rootSpan.update({
+            output: fullText,
+            metadata: {
+              temporalWindowDays: ragResult.temporalWindow,
+              candidates: ragResult.candidates.length,
+              contextChunks: ragResult.rerankedChunks.length,
+              citedArticleIds: citations.map((c) => c.articleId),
+            },
+          });
         } catch (error) {
           console.error('Answer stream error:', error);
+          const message = error instanceof Error ? error.message : String(error);
+          rootSpan.update({ level: 'ERROR', statusMessage: message });
           const errorMessage: ErrorMessage = {
             type: 'error',
-            message: error instanceof Error ? error.message : String(error),
+            message,
           };
           controller.enqueue(`\ndata: ${JSON.stringify(errorMessage)}\n\n`);
         } finally {
+          rootSpan.end();
           controller.close();
         }
       },
@@ -125,10 +141,12 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error('Request error:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    rootSpan.update({ level: 'ERROR', statusMessage: message }).end();
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : String(error),
+        message,
       }),
       {
         status: 500,

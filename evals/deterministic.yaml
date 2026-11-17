@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# Deterministic (code-graded) evals: pure pipeline functions, no LLM calls, $0.
+# Run: pnpm eval:deterministic
+description: Deterministic checks - temporal window detection and reranker score parsing
+
+prompts:
+  - '{{input}}'
+
+providers:
+  - id: file://providers/function-provider.ts
+    label: temporal-window
+    config:
+      fn: temporalWindow
+  - id: file://providers/function-provider.ts
+    label: rerank-score
+    config:
+      fn: rerankScore
+
+tests:
+  # Temporal window: query wording → recency window in days (lib/server/rag/temporal-detection.ts)
+  - description: 'temporal: "today" narrows to 1 day'
+    providers: [temporal-window]
+    vars: { input: 'What happened with Bitcoin today?' }
+    assert: [{ type: equals, value: '1' }]
+  - description: 'temporal: "yesterday" uses 2 days'
+    providers: [temporal-window]
+    vars: { input: 'Any ETF news from yesterday?' }
+    assert: [{ type: equals, value: '2' }]
+  - description: 'temporal: "breaking" uses 3 days'
+    providers: [temporal-window]
+    vars: { input: 'Breaking news on Solana' }
+    assert: [{ type: equals, value: '3' }]
+  - description: 'temporal: "this week" uses 7 days'
+    providers: [temporal-window]
+    vars: { input: 'What happened with the Solana ETF this week?' }
+    assert: [{ type: equals, value: '7' }]
+  - description: 'temporal: "latest" uses 7 days'
+    providers: [temporal-window]
+    vars: { input: 'Latest Ethereum upgrades' }
+    assert: [{ type: equals, value: '7' }]
+  - description: 'temporal: "recently" uses 14 days'
+    providers: [temporal-window]
+    vars: { input: 'What did the SEC do recently?' }
+    assert: [{ type: equals, value: '14' }]
+  - description: 'temporal: "this month" uses 30 days'
+    providers: [temporal-window]
+    vars: { input: 'Stablecoin news this month' }
+    assert: [{ type: equals, value: '30' }]
+  - description: 'temporal: no keyword falls back to 21 days'
+    providers: [temporal-window]
+    vars: { input: 'Tell me about Cardano Hydra' }
+    assert: [{ type: equals, value: '21' }]
+  - description: 'temporal: case-insensitive'
+    providers: [temporal-window]
+    vars: { input: 'BITCOIN NEWS TODAY' }
+    assert: [{ type: equals, value: '1' }]
+  - description: 'temporal: "todays" is not "today" (word boundary)'
+    providers: [temporal-window]
+    vars: { input: 'Explain todays-style tokenomics' }
+    assert: [{ type: equals, value: '21' }]
+
+  # Reranker reply parsing (lib/server/rag/reranker.ts parseRerankScore)
+  - description: 'rerank: plain integer'
+    providers: [rerank-score]
+    vars: { input: '7' }
+    assert: [{ type: equals, value: '7' }]
+  - description: 'rerank: whitespace and decimal'
+    providers: [rerank-score]
+    vars: { input: "  8.5\n" }
+    assert: [{ type: equals, value: '8.5' }]
+  - description: 'rerank: out of range is rejected'
+    providers: [rerank-score]
+    vars: { input: '11' }
+    assert: [{ type: equals, value: 'null' }]
+  - description: 'rerank: zero is rejected'
+    providers: [rerank-score]
+    vars: { input: '0' }
+    assert: [{ type: equals, value: 'null' }]
+  - description: 'rerank: prose reply is rejected'
+    providers: [rerank-score]
+    vars: { input: 'Highly relevant' }
+    assert: [{ type: equals, value: 'null' }]
+  - description: 'rerank: number followed by explanation keeps the number'
+    providers: [rerank-score]
+    vars: { input: '9 - directly answers the query' }
+    assert: [{ type: equals, value: '9' }]

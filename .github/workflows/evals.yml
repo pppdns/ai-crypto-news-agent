@@ -1,0 +1,65 @@
+# Quality gate for the RAG pipeline: static checks, unit tests and the offline PromptFoo evals.
+#
+# Not enabled automatically: it only runs when started by hand (Actions → Evals → Run workflow).
+# To run it on pull requests that touch the pipeline, uncomment the `pull_request` block below and add the
+# repository secrets OPENAI_API_KEY and AI_GATEWAY_API_KEY (and optionally LANGFUSE_* to trace eval runs).
+# Retrieval and red-team evals stay local: they need a seeded Supabase database and are slower and costlier.
+name: Evals
+
+on:
+  workflow_dispatch:
+  # pull_request:
+  #   paths:
+  #     - 'lib/server/rag/**'
+  #     - 'evals/**'
+  #     - 'app/ask/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+      LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+      LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+      LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
+      LANGFUSE_TRACING_ENVIRONMENT: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Type check, lint, unit tests
+        run: |
+          pnpm typecheck
+          pnpm lint
+          pnpm test:run
+
+      - name: Deterministic evals (no LLM calls)
+        run: pnpm eval:deterministic
+
+      - name: Generation evals (answer model + LLM judge)
+        run: pnpm eval:generation
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promptfoo-results
+          path: .promptfoo/output/
+          if-no-files-found: ignore

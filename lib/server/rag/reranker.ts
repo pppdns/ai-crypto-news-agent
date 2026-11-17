@@ -1,7 +1,9 @@
 /**
  * LLM-based re-ranking of search results
  * Uses gpt-4o-mini to score chunk relevance and return top results
+ * The OpenAI client is wrapped with Langfuse `observeOpenAI`, so every scoring call is traced as a generation.
  */
+import { observeOpenAI } from '@langfuse/openai';
 import OpenAI from 'openai';
 import { getRerankPrompt } from './prompts';
 import { Chunk } from './types';
@@ -14,11 +16,31 @@ function getOpenAIClient(): OpenAI {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('Missing OPENAI_API_KEY environment variable');
     }
-    openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    openaiClient = observeOpenAI(new OpenAI({ apiKey: process.env.OPENAI_API_KEY }), {
+      generationName: 'rerank-score',
     });
   }
   return openaiClient;
+}
+
+/**
+ * Parse the reranker model's reply into a relevance score.
+ *
+ * @param scoreText - Raw model output, expected to be a single number from 1 to 10
+ * @returns The score, or null if the reply is empty, not a number, or out of range
+ */
+export function parseRerankScore(scoreText: string | null | undefined): number | null {
+  const trimmed = scoreText?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const score = parseFloat(trimmed);
+  if (isNaN(score) || score < 1 || score > 10) {
+    return null;
+  }
+
+  return score;
 }
 
 /**
@@ -40,16 +62,10 @@ async function scoreChunk(query: string, chunk: Chunk): Promise<number | null> {
       max_tokens: 10,
     });
 
-    const scoreText = response.choices[0]?.message?.content?.trim();
-    if (!scoreText) {
-      return null;
-    }
-
-    // Parse the score
-    const score = parseFloat(scoreText);
-    if (isNaN(score) || score < 1 || score > 10) {
+    const scoreText = response.choices[0]?.message?.content;
+    const score = parseRerankScore(scoreText);
+    if (score === null && scoreText?.trim()) {
       console.warn(`Invalid score received: ${scoreText}`);
-      return null;
     }
 
     return score;
