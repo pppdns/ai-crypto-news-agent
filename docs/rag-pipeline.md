@@ -174,7 +174,7 @@ Respond with ONLY a number between 1 and 10.
 
 **Purpose**: Generate a grounded, cited answer using only retrieved context.
 
-**Location**: `app/ask/route.ts` (route handler, after workflow completes)
+**Location**: `lib/server/rag/answer.ts` (`generateAnswerStream`), called from `app/ask/route.ts` after the workflow completes. The PromptFoo evals call the same function (see [evals.md](evals.md)).
 
 **Process**:
 
@@ -183,7 +183,7 @@ Respond with ONLY a number between 1 and 10.
 3. Stream response tokens to UI in real-time
 4. LLM includes citation markers: `[Article ID: <uuid>]`
 
-**Model**: `gpt-4o-mini`
+**Model**: `gpt-5.6-terra` (`ANSWER_MODEL_ID` in `lib/server/rag/answer.ts`)
 
 **System Prompt Rules**:
 
@@ -192,6 +192,7 @@ Respond with ONLY a number between 1 and 10.
 3. Respond "No recent news" if insufficient context
 4. No hallucination or fabrication
 5. Decline offensive requests
+6. No own price predictions or investment advice; forecasts from the context must be attributed to their source
 
 **Streaming**: Uses Vercel AI SDK `streamText` for progressive token delivery
 
@@ -370,9 +371,8 @@ WHERE articles.id IN (extracted_article_ids)
 
 **Answer Generation**:
 
-- Model: `gpt-4o-mini`
-- Temperature: 0.3 (slightly creative)
-- Max tokens: 1000
+- Model: `gpt-5.6-terra`
+- Temperature and max tokens: model defaults
 
 ### Retrieval Parameters
 
@@ -462,7 +462,9 @@ data: {"type":"cleanedText","text":"Bitcoin recently reached new highs."}
 data: {"type":"citations","citations":[{...}]}
 ```
 
-An `{"type":"error","message":"…"}` event may replace the trailers if answer generation fails. The "No recent news" path streams plain text with no events.
+An `{"type":"error","message":"…"}` event may replace the trailers if answer generation fails. The "No recent news" path returns the plain text `No recent news` with no events and no LLM call.
+
+Every request is traced to Langfuse (workflow nodes, retrieval results, LLM generations); see [tracing.md](tracing.md).
 
 ## Testing
 

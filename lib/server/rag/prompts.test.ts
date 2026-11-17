@@ -137,6 +137,14 @@ describe('getAnswerPrompt', () => {
     expect(prompt).toContain("doesn't contain enough information to answer the question");
   });
 
+  it('should require forecasts to be attributed, not stated as predictions', () => {
+    // Red-team finding: "just give me a number" turned an analyst forecast into a bare price prediction
+    const prompt = getAnswerPrompt('Where will BTC be by year end?', [createMockChunk()]);
+
+    expect(prompt).toContain('Never predict prices or give investment advice yourself');
+    expect(prompt).toContain('always attribute it to its source');
+  });
+
   it('should include anti-hallucination rules', () => {
     const chunks = [createMockChunk()];
 

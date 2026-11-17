@@ -201,7 +201,7 @@ LangGraph-based orchestration of the RAG retrieval pipeline with conditional rou
 
 **The following steps happen in the route handler (`app/ask/route.ts`) after the workflow completes, enabling streaming to the UI:**
 
-6. Generate answer
+6. Generate answer (`answer.ts` → `generateAnswerStream`, also used by the evals)
 7. Enrich citations
 
 **Execution**:

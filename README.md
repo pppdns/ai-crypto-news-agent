@@ -116,6 +116,25 @@ Streaming Response + Citations
 
 ---
 
+## 🧪 Evals & Observability
+
+**Evals ([PromptFoo](https://www.promptfoo.dev/))**: four suites that call the production pipeline code, from free and deterministic to adversarial:
+
+| Suite         | Checks                                                                            | Latest result                             |
+| ------------- | --------------------------------------------------------------------------------- | ----------------------------------------- |
+| Deterministic | Temporal-window detection, reranker score parsing (code-graded, $0)               | 16 / 16                                   |
+| Retrieval     | Golden questions on a seeded DB: Hit@8, MRR, recency-window filtering             | 14 / 14 · Hit@8 1.00 · MRR 0.94           |
+| Generation    | Faithfulness (LLM judge), citation integrity, "No recent news", safety, injection | 28 / 28 (production vs. comparison model) |
+| Red team      | Generated attacks: prompt extraction, hallucination, overreliance, policies       | 54 / 54 (after fixing 1 finding)          |
+
+The LLM judge is Claude (via Vercel AI Gateway), a different vendor from the OpenAI answer model. A manual-only GitHub Actions workflow runs the offline suites.
+
+**Tracing ([Langfuse](https://langfuse.com))**: every `/ask` request is one nested trace (LangGraph nodes, embedding, hybrid search results, reranker and answer generations with tokens and cost). It runs alongside Sentry on the same OpenTelemetry pipeline.
+
+📖 **Details:** [docs/evals.md](docs/evals.md) | [docs/tracing.md](docs/tracing.md)
+
+---
+
 ## 🔑 Key Technical Choices
 
 | Technology                                  | Why                                                                                                                 |
@@ -192,6 +211,8 @@ article_chunks (id, article_id, chunk_index, content, embedding[1536], token_cou
 - **[Trigger Deployment](docs/trigger-deployment.md)** - Production deployment guide
 - **[Crypto News Sources](docs/crypto-news-sources.md)** - RSS feed details
 - **[Testing](docs/testing.md)** - Testing guide with Vitest
+- **[Evals](docs/evals.md)** - PromptFoo eval suites, results, CI
+- **[Tracing](docs/tracing.md)** - Langfuse tracing of the RAG pipeline
 - **[CLAUDE.md](CLAUDE.md)** - Guide for Claude Code (commands, code map, conventions). Shared settings, hooks and slash commands live in `.claude/`
 - **MCP servers** - `.mcp.json` (and `.cursor/mcp.json`) add `next-devtools` and a **read-only** Supabase MCP for the production project, so coding agents can query production data without write access. Sign in to Supabase via OAuth on first use (`/mcp` in Claude Code)
 
@@ -262,6 +283,14 @@ FIRECRAWL_API_KEY=<your_firecrawl_api_key>
 
 # Environment
 NODE_ENV=development
+
+# Optional: Langfuse tracing (see docs/tracing.md)
+LANGFUSE_PUBLIC_KEY=<pk-lf-...>
+LANGFUSE_SECRET_KEY=<sk-lf-...>
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+
+# Optional: evals (LLM judge + comparison model via Vercel AI Gateway)
+AI_GATEWAY_API_KEY=<your_ai_gateway_key>
 ```
 
 ### Database Setup
@@ -317,6 +346,17 @@ pnpm test:coverage
 ```
 
 See [docs/testing.md](docs/testing.md) for detailed testing guide.
+
+### Running Evals
+
+```bash
+pnpm eval              # deterministic + generation suites
+pnpm eval:retrieval    # needs local Supabase seeded with: pnpm tsx scripts/mock-ingest.ts --rebase-dates
+pnpm eval:redteam
+pnpm eval:view         # browse results in the PromptFoo UI
+```
+
+See [docs/evals.md](docs/evals.md).
 
 ### Stopping Services
 

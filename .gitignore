@@ -49,3 +49,7 @@ next-env.d.ts
 # Claude Code personal overrides (shared config lives in .claude/settings.json and CLAUDE.md)
 .claude/settings.local.json
 CLAUDE.local.md
+
+# PromptFoo eval cache, results and generated red-team probes
+.promptfoo/
+evals/redteam.generated.yaml

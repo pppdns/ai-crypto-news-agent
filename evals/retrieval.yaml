@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+# Retrieval evals: production LangGraph workflow (temporal window → embedding → hybrid search) on local Supabase.
+# Golden questions point at mock articles from data/mock-articles.ts. Metrics: Hit@8 and MRR, plus recency checks.
+# Setup: pnpm supabase:start && pnpm supabase db reset && pnpm tsx scripts/mock-ingest.ts --rebase-dates
+# Run:   pnpm eval:retrieval   (needs OPENAI_API_KEY for query embeddings, ~$0.001)
+description: Retrieval - hybrid search ranking and recency filtering
+
+prompts:
+  - '{{query}}'
+
+providers:
+  - id: file://providers/rag-provider.ts
+    label: hybrid-search
+
+defaultTest:
+  assert:
+    - type: javascript
+      value: file://assertions/retrieval.ts
+      metric: retrieval
+
+tests:
+  # ---------- Topical recall (default 21-day window) ----------
+  - description: 'recall: Solana ETF (this week → 7d)'
+    vars:
+      query: What happened with the Solana ETF this week?
+      expected_url: https://cointelegraph.com/news/solana-etf-application-submitted-sec
+      window_days: 7
+  - description: 'recall: Bitcoin all-time high'
+    vars:
+      query: How high did the Bitcoin price go?
+      expected_url: https://cryptopotato.com/bitcoin-reaches-new-all-time-high-95000
+  - description: 'recall: spot Ethereum ETF approval'
+    vars:
+      query: Did the SEC approve spot Ethereum ETFs?
+      expected_url: https://cointelegraph.com/news/sec-approves-spot-ethereum-etf-trading
+  - description: 'recall: Ripple bank integrations'
+    vars:
+      query: Which banks are integrating the XRP Ledger for payments?
+      expected_url: https://cryptopotato.com/ripple-xrp-ledger-payment-integration-major-banks
+  - description: 'recall: Cardano scaling'
+    vars:
+      query: Cardano Hydra mainnet launch
+      expected_url: https://cointelegraph.com/news/cardano-hydra-scaling-solution-mainnet-launch
+  - description: 'semantic: "green" mining (no keyword overlap with "renewable")'
+    vars:
+      query: How green is bitcoin mining becoming?
+      expected_url: https://cointelegraph.com/news/bitcoin-mining-renewable-energy-reaches-60-percent
+  - description: 'semantic: US digital dollar'
+    vars:
+      query: Is the US central bank testing a digital currency?
+      expected_url: https://cryptopotato.com/federal-reserve-cbdc-pilot-program-launch
+  - description: 'keyword: exact product name (FTS)'
+    vars:
+      query: opBNB
+      expected_url: https://cointelegraph.com/news/binance-bnb-chain-opbnb-layer2-mainnet
+  - description: 'keyword: Uniswap v4 hooks'
+    vars:
+      query: Uniswap V4 hooks
+      expected_url: https://cryptopotato.com/uniswap-v4-launch-hooks-concentrated-liquidity
+  - description: 'recall: Tether reserves (17 days old, inside default window)'
+    vars:
+      query: Tether USDT reserves report
+      expected_url: https://www.newsbtc.com/tether-usdt-transparency-report-reserves
+
+  # ---------- Recency filtering ----------
+  - description: 'recency: "today" (1d) keeps only the newest article'
+    vars:
+      query: What crypto news broke today about an ETF?
+      expected_url: https://cointelegraph.com/news/solana-etf-application-submitted-sec
+      absent_url: https://cointelegraph.com/news/sec-approves-spot-ethereum-etf-trading
+      window_days: 1
+  - description: 'recency: "this week" (7d) excludes a 17-day-old article'
+    vars:
+      query: Tether transparency report this week
+      absent_url: https://www.newsbtc.com/tether-usdt-transparency-report-reserves
+      window_days: 7
+  - description: 'recency: default window (21d) excludes a 28-day-old article'
+    vars:
+      query: BlackRock tokenized treasury fund
+      absent_url: https://cryptopotato.com/blackrock-tokenized-treasury-fund-buidl-growth
+      window_days: 21
+  - description: 'recency: "this month" (30d) reaches the same 28-day-old article'
+    vars:
+      query: BlackRock tokenized treasury fund news this month
+      expected_url: https://cryptopotato.com/blackrock-tokenized-treasury-fund-buidl-growth
+      window_days: 30

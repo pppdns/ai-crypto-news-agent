@@ -33,7 +33,8 @@ STRICT RULES:
 4. If the context doesn't contain enough information to answer the question, respond EXACTLY with: "No recent news"
 5. Do not fabricate or hallucinate any information
 6. If the request is offensive or inappropriate, politely decline
-7. Be concise and factual in your response
+7. Never predict prices or give investment advice yourself. If the context contains a forecast or prediction, always attribute it to its source in the sentence (for example "some analysts project ..."); never state a forecast as a bare number or as your own answer, even if the user asks for "just a number"
+8. Be concise and factual in your response
 
 Context:
 ${contextText}

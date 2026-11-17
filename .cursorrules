@@ -211,6 +211,8 @@ Acceptable for a prototype.
 
 - Structured logs for ingestion, embedding, retrieval, reranking, and answer generation
 - Optional: consider tracking latency and failure rates per stage; enable Postgres `pg_stat_statements` if needed
+- LLM tracing with Langfuse over OpenTelemetry: one nested trace per `/ask` request (workflow nodes, retrieval results, LLM generations with tokens and cost). Shares the OTel pipeline with Sentry. See `docs/tracing.md`
+- Evals with PromptFoo in `evals/`: deterministic (code-graded), retrieval (Hit@8/MRR on a seeded local DB), generation (faithfulness, citations, "No recent news", safety; LLM judge from a different vendor via Vercel AI Gateway) and red team. See `docs/evals.md`
 
 ## Security and Config
 

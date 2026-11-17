@@ -11,6 +11,13 @@
  *
  * Usage:
  *   pnpm tsx scripts/mock-ingest.ts
+ *   pnpm tsx scripts/mock-ingest.ts --rebase-dates
+ *
+ * --rebase-dates shifts every mock `published_at` by the same offset so the newest article is 6 hours old.
+ * The fixtures date from Oct 2025, which is outside the search recency window; rebasing makes them
+ * retrievable for local dev and the retrieval evals (evals/retrieval.yaml). Relative order is kept.
+ * Existing articles are skipped (deduplicated by URL), so reset the local DB first to re-date them:
+ *   pnpm supabase db reset && pnpm tsx scripts/mock-ingest.ts --rebase-dates
  *
  * Environment variables required:
  *   - SUPABASE_URL
@@ -18,7 +25,7 @@
  *   - OPENAI_API_KEY
  */
 import { loadEnv } from '@/lib/server/load-env';
-import { mockArticles } from '../data/mock-articles';
+import { type MockArticle, mockArticles } from '../data/mock-articles';
 import { chunkText, freeEncoder } from '../lib/server/chunking';
 import { generateEmbeddings } from '../lib/server/embeddings';
 import { getSources, insertArticle, insertChunks } from '../lib/server/ingestion';
@@ -39,6 +46,23 @@ function validateEnv(): void {
     missing.forEach((key) => console.error(`   - ${key}`));
     process.exit(1);
   }
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Shift all article dates so the newest one is 6 hours before now (inside even a "today" window), keeping their spacing.
+ */
+function rebaseArticleDates(articles: MockArticle[], now: Date = new Date()): MockArticle[] {
+  if (articles.length === 0) {
+    return articles;
+  }
+  const newest = Math.max(...articles.map((a) => new Date(a.published_at).getTime()));
+  const offset = now.getTime() - 6 * HOUR_MS - newest;
+  return articles.map((a) => ({
+    ...a,
+    published_at: new Date(new Date(a.published_at).getTime() + offset).toISOString(),
+  }));
 }
 
 // Main ingestion function
@@ -64,8 +88,14 @@ async function ingest(): Promise<void> {
     let totalChunks = 0;
     let totalTokens = 0;
 
+    const rebaseDates = process.argv.includes('--rebase-dates');
+    const articles = rebaseDates ? rebaseArticleDates(mockArticles) : mockArticles;
+    if (rebaseDates) {
+      console.log('📅 Rebasing article dates so the newest is 6 hours old\n');
+    }
+
     // Process each article
-    for (const mockArticle of mockArticles) {
+    for (const mockArticle of articles) {
       totalArticles++;
       const sourceId = sourceMap.get(mockArticle.source_name);
 

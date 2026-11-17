@@ -13,23 +13,26 @@ Guidance for Claude Code when working in this repository. The full product spec 
 
 Node 22 (`.nvmrc`) and pnpm (version pinned in `package.json` `packageManager`; `corepack enable pnpm`). Install with `pnpm install --frozen-lockfile`. In Claude Code cloud sessions the SessionStart hook (`.claude/hooks/session-start.sh`) installs dependencies automatically.
 
-| Task                    | Command                                                    |
-| ----------------------- | ---------------------------------------------------------- |
-| Dev server (port 3021)  | `pnpm dev`                                                 |
-| Unit tests (single run) | `pnpm test:run` (never plain `pnpm test`, it starts watch) |
-| Single test file        | `pnpm vitest run lib/server/url-utils.test.ts`             |
-| Type check              | `pnpm typecheck`                                           |
-| Lint                    | `pnpm lint` (`pnpm lint:fix` to autofix)                   |
-| Format check / write    | `pnpm format:check` / `pnpm prettier --write <files>`      |
-| Local Supabase          | `pnpm supabase:start` / `pnpm supabase:stop` (Docker)      |
-| Regenerate DB types     | `pnpm supabase:gen-types:dev` (after any migration change) |
-| Load mock articles      | `pnpm tsx scripts/mock-ingest.ts`                          |
-| Run the real crawler    | `pnpm tsx scripts/crawl-news.ts`                           |
-| Trigger.dev local / prd | `pnpm trigger:dev` / `pnpm trigger:deploy`                 |
+| Task                    | Command                                                        |
+| ----------------------- | -------------------------------------------------------------- |
+| Dev server (port 3021)  | `pnpm dev`                                                     |
+| Unit tests (single run) | `pnpm test:run` (never plain `pnpm test`, it starts watch)     |
+| Single test file        | `pnpm vitest run lib/server/url-utils.test.ts`                 |
+| Type check              | `pnpm typecheck`                                               |
+| Lint                    | `pnpm lint` (`pnpm lint:fix` to autofix)                       |
+| Format check / write    | `pnpm format:check` / `pnpm prettier --write <files>`          |
+| Local Supabase          | `pnpm supabase:start` / `pnpm supabase:stop` (Docker)          |
+| Regenerate DB types     | `pnpm supabase:gen-types:dev` (after any migration change)     |
+| Load mock articles      | `pnpm tsx scripts/mock-ingest.ts` (`--rebase-dates` for evals) |
+| Evals (offline set)     | `pnpm eval` (deterministic + generation)                       |
+| Retrieval / red team    | `pnpm eval:retrieval` / `pnpm eval:redteam`                    |
+| Eval results UI         | `pnpm eval:view`                                               |
+| Run the real crawler    | `pnpm tsx scripts/crawl-news.ts`                               |
+| Trigger.dev local / prd | `pnpm trigger:dev` / `pnpm trigger:deploy`                     |
 
 Before calling a change done, run `pnpm typecheck`, `pnpm lint`, `pnpm test:run`, and `pnpm prettier --check` on the changed files. The husky pre-commit hook runs lint-staged (prettier + eslint --fix) and `tsc`, so commits fail if these are broken.
 
-Scripts that touch the database, OpenAI or Firecrawl (`mock-ingest`, `crawl-news`, `/ask`) need real env vars and a running Supabase; they are not runnable in a bare sandbox. Unit tests need neither.
+Scripts that touch the database, OpenAI or Firecrawl (`mock-ingest`, `crawl-news`, `/ask`) need real env vars and a running Supabase; they are not runnable in a bare sandbox. Unit tests need neither. `eval:deterministic` needs nothing; `eval:generation` and `eval:redteam` need `OPENAI_API_KEY` and `AI_GATEWAY_API_KEY`; `eval:retrieval` also needs local Supabase seeded with `mock-ingest --rebase-dates`. When you change a prompt, the answer model or retrieval, run the matching eval suite.
 
 ## Code map
 
@@ -45,14 +48,18 @@ lib/server/                Server-only code (never import from client components
   rag/hybrid-search.ts     Calls the Postgres hybrid search RPC (supabase/migrations/0003)
   rag/reranker.ts          gpt-4o-mini relevance scoring
   rag/prompts.ts           Answer prompt + guardrails ("No recent news" rule)
+  rag/answer.ts            Answer model + generateAnswerStream (shared by /ask and the evals)
   rag/citations.ts         Parses [Date, Article ID] citations and enriches them from the DB
   crawler.ts               RSS → Firecrawl → ingest loop, updates sources.last_scraped_at
   rss-parser.ts, firecrawl.ts, chunking.ts, embeddings.ts, ingestion.ts, url-utils.ts
   supabase.ts              Service-role client (bypasses RLS)
+  tracing.ts               Langfuse span processor, standalone OTel setup, flushTraces()
   index-stats.ts           Article/source counts and latest headlines for the UI
 lib/client/                Browser-safe helpers: ask-stream.ts (parses /ask body), relative-time.ts, types.ts
 trigger/crawl-crypto-news.ts  Trigger.dev scheduled crawl (cron in that file)
 scripts/                   CLI entry points (run with tsx)
+evals/                     PromptFoo suites (*.yaml), custom providers, assertions, fixtures
+.github/workflows/evals.yml  Manual-only CI: checks + offline evals
 supabase/migrations/       Numbered SQL migrations; database.types.ts is generated
 data/mock-articles.ts      Fixture articles for local dev
 docs/                      Deep dives: crawler, ingestion, RAG, scheduling, testing, deployment
@@ -73,7 +80,9 @@ docs/                      Deep dives: crawler, ingestion, RAG, scheduling, test
 
 - Embedding model and dimensions are defined in both `lib/server/constants.ts` and `lib/server/embeddings.ts`, and the vector size is fixed at `vector(1536)` in the migrations. Change all of them together, or none.
 - Re-ranking is currently disabled in practice: `RERANK_THRESHOLD` (50) in `rag/workflow.ts` is above `CANDIDATE_LIMIT` (40), so the workflow always takes the skip-rerank path.
-- The answer model is set in `app/ask/route.ts`; the reranker model is set in `rag/reranker.ts`.
+- The answer model is `ANSWER_MODEL_ID` in `rag/answer.ts`; the reranker model is set in `rag/reranker.ts`.
+- Tracing: Sentry owns the OpenTelemetry provider in production and Langfuse is added as a span processor (`sentry.server.config.ts`). Keep a single `@opentelemetry/api` version (pinned in `pnpm-workspace.yaml` overrides) or traces fragment. New LLM calls should go through the AI SDK with `experimental_telemetry` or a Langfuse wrapper so they appear in traces.
+- PromptFoo resolves `file://` paths relative to the config file, and expands list-valued vars into multiple tests unless `disableVarExpansion` is set.
 - `.env.development` is committed and only holds the public default keys for a local self-hosted Supabase. Never put real secrets in it.
 - The crawl schedule is the `cron` field in `trigger/crawl-crypto-news.ts`; it only takes effect after `pnpm trigger:deploy`.
 

@@ -5,3 +5,7 @@ allowBuilds:
 permissions:
   '@trigger.dev/sdk':
     skills: true
+# One copy of the OpenTelemetry API: Sentry, Langfuse and the AI SDK must share the global tracer provider
+# (copies with different minor versions do not see each other's registration, which breaks trace nesting)
+overrides:
+  '@opentelemetry/api': 1.9.1
